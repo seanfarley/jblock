@@ -2,3 +2,17 @@
 * jblock - j's adblocker
 
 ~jblock~ is a WIP. We'll see if it ever gets finished.
+
+* Inspiration/Sources
+- [[https://github.com/scrapinghub/adblockparser][adblockparser]]
+- [[https://adblockplus.org/filter-cheatsheet#options][adblock filter cheatsheet]]
+- [[https://adblockplus.org/en/filters][ABP filter doc]]
+- [[https://adblockplus.org/blog/investigating-filter-matching-algorithms][(ABP) Investigating filter matching algorithms]]
+- [[https://adblockplus.org/forum/viewtopic.php?t=6118][ABP faster filter matching]]
+- [[https://github.com/ZhukovAlexander/triegex][triegex]]
+- [[https://github.com/gorhill/uBlock/blob/master/src/js/static-net-filtering.js][uBlock filtering code]]
+- [[https://github.com/gorhill/uBlock/wiki/Overview-of-uBlock's-network-filtering-engine][uBlock design doc]]
+- [[https://github.com/adblockplus/adblockpluscore/blob/master/lib/matcher.js][ABP filtering code]]
+- [[https://adblockplus.org/faq_internal][ABP internal faq]]
+- [[https://www.loggly.com/blog/five-invaluable-techniques-to-improve-regex-performance/][Regexp performance tips]]
+- [[https://github.com/gorhill/uBlock/blob/261ef8c510fd91ead57948d1f7793a7a5e2a25fd/src/js/utils.js][uBlock tokenizer]]
