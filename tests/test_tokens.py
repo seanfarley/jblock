@@ -16,7 +16,7 @@
 
 import pytest
 
-from jblock import token
+from jblock import token, parser
 
 TOKENS = {
 	"https://snowplow.trx.gitlab.net/com.snowplowanalytics.snowplow/tp2":
@@ -33,10 +33,25 @@ TOKENS = {
 	['https', 'github', 'com', 'qutebrowser', 'qutebrowser'],
 }
 
+# These patterns are not converted to regexps yet
+PATTERN_TOKENS = {
+	# TODO should img be in this token list?
+	"/banner/*/img^": ["banner"],
+	".theadtech.": ["theadtech"],
+	".to/ads/": ["to", "ads"],
+}
+
 
 @pytest.mark.parametrize(('url', 'tokens'), TOKENS.items())
 def test_token_basic(url, tokens):
 	assert token.TokenConverter.url_to_tokens(url) == tokens
+
+
+@pytest.mark.parametrize(('pattern', 'tokens'), PATTERN_TOKENS.items())
+def test_pattern_token_basic(pattern, tokens):
+	re = parser.JBlockRule(pattern).regex
+	t = token.TokenConverter.regex_to_tokens(re)
+	assert t == tokens
 
 
 ## Benchmarks

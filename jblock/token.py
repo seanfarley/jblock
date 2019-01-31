@@ -32,7 +32,7 @@ class TokenConverter():
 	REGEX_TOKEN_ABORT = re.compile(r'[([]')
 	# TODO find out if this blocks the case where we do *pattern
 	REGEX_BAD_PREFIX = re.compile(r'(^|[^\\]\.|[*?{}\\])$')
-	REGEX_BAD_SUFFIX = re.compile(r'^([^\]\.|\[dw]|[([{}?*]|$)')
+	REGEX_BAD_SUFFIX = re.compile(r'^([^\\]\.|\\[dw]|[([{}?*]|$)')
 	# These tokens won't interfere with proper matching, they just slow us down.
 	# This needs tuning
 	BAD_TOKENS = frozenset(['com', 'http', 'https', 'icon', 'images', 'img',
@@ -72,11 +72,12 @@ class TokenConverter():
 		https://github.com/gorhill/uBlock/blob/4f3aed6fe6347572c38ec9a293f933387b81e5de/src/js/static-net-filtering.js#L1921
 		"""
 		tokens = []
+		breakpoint()
 		for match in TokenConverter.REGEX_TOKEN_RE.finditer(s):
 			# prefix is from the start of the string to the start of the match
 			prefix = s[0:match.start(0)]
 			suffix = s[match.end(0) + 1:]
-			match = match.group(0).lower()
+			match_str = match.group(0).lower()
 
 			# If we have any of these characters leading to our match, we cannot reliably get a substring (this token
 			# could be in an optional match or char class)
@@ -84,8 +85,10 @@ class TokenConverter():
 				return tokens
 
 			if (TokenConverter.REGEX_BAD_PREFIX.search(prefix) or
-				TokenConverter.REGEX_BAD_SUFFIX(suffix)):
+				TokenConverter.REGEX_BAD_SUFFIX.search(suffix)):
 				# This token is unsuitable.
 				continue
 
-			tokens.append(match)
+			tokens.append(match_str)
+
+		return tokens
