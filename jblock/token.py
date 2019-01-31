@@ -16,12 +16,19 @@
 
 import re
 import typing
+import itertools
+import functools
+import operator
 
 Token = str
 
 
 class TokenConverter():
-	"""Static class for housing token conversion methods"""
+	"""Static class for housing token conversion methods.
+
+	There are two (obvious) options for token format, a substring of the literal token, and an int representing the sum of all the chars in the token.
+
+	Int is preferred for faster dict lookup, but requires loops which are expensive in cpython."""
 
 	VALID_TOKEN_CHARS = frozenset('0123456789%abcdefghijklmnopqrstuvwxyz')
 	VALID_TOKEN_CHARS_INT = frozenset(map(ord, VALID_TOKEN_CHARS))
@@ -50,7 +57,7 @@ class TokenConverter():
 	def url_to_tokens_int(s: str) -> typing.MutableSet[int]:
 		"""Alternative int token generation.
 
-		Seems to be 2x slower than the re based solution.
+		Seems to be 2x slower than the re based solution on cpython, but 4x faster than the re based solution on pypy.
 
 		Based on this absolute mess:
 		https://github.com/gorhill/uBlock/blob/261ef8c510fd91ead57948d1f7793a7a5e2a25fd/src/js/utils.js#L81
@@ -64,6 +71,27 @@ class TokenConverter():
 				tally = 0
 		return tokens
 
+	# Alternative generator based implementation
+	# @staticmethod
+	# def url_to_tokens_int(s: str) -> typing.MutableSet[int]:
+	# 	"""Alternative int token generation.
+
+	# 	Seems to be 2x slower than the re based solution on cpython, but 4x faster than re based solution on pypy.
+
+	# 	Based on this absolute mess:
+	# 	https://github.com/gorhill/uBlock/blob/261ef8c510fd91ead57948d1f7793a7a5e2a25fd/src/js/utils.js#L81
+	# 	"""
+	# 	tokens, arr = set(), bytearray(s, 'ascii')
+	# 	groups = itertools.groupby(arr, TokenConverter.VALID_TOKEN_CHARS_INT.__contains__)
+	# 	groups = filter(operator.itemgetter(0), groups)
+	# 	groups = list(map(itertools.accumulate, map(operator.itemgetter(1), groups))j
+	# 	return groups
+
+	@staticmethod
+	def str_token_to_int(s: str) -> int:
+		"""Convert a string-based token into an int based token."""
+		return itertools.accumulate(bytearray(s, 'ascii'))
+
 
 	@staticmethod
 	def regex_to_tokens(s: str) -> typing.MutableSequence[Token]:
@@ -72,7 +100,6 @@ class TokenConverter():
 		https://github.com/gorhill/uBlock/blob/4f3aed6fe6347572c38ec9a293f933387b81e5de/src/js/static-net-filtering.js#L1921
 		"""
 		tokens = []
-		breakpoint()
 		for match in TokenConverter.REGEX_TOKEN_RE.finditer(s):
 			# prefix is from the start of the string to the start of the match
 			prefix = s[0:match.start(0)]

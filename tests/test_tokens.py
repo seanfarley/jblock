@@ -60,7 +60,6 @@ def test_token_str_bench(benchmark):
 	benchmark(lambda: list(map(token.TokenConverter.url_to_tokens, TOKENS.keys())))
 
 
-@pytest.mark.skip()
 def test_token_int_bench(benchmark):
 	"""Looks like int hashing is slower than re split."""
 	benchmark(lambda: list(map(token.TokenConverter.url_to_tokens_int, TOKENS.keys())))
