@@ -20,10 +20,9 @@ TOKENS = {
 }
 
 
-@pytest.mark.skip()
 @pytest.mark.parametrize(('url', 'tokens'), TOKENS.items())
 def test_token_basic(url, tokens):
-	assert set(token.TokenConverter.url_to_token(url)) == set(tokens)
+	assert token.TokenConverter.url_to_token(url) == tokens
 
 
 ## Benchmarks
@@ -32,6 +31,7 @@ def test_token_str_bench(benchmark):
 	benchmark(lambda: list(map(token.TokenConverter.url_to_token, TOKENS.keys())))
 
 
+@pytest.mark.skip()
 def test_token_int_bench(benchmark):
 	"""Looks like int hashing is slower than re split."""
 	benchmark(lambda: list(map(token.TokenConverter.url_to_token_int, TOKENS.keys())))

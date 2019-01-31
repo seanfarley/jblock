@@ -21,3 +21,4 @@ If you pass pep8, you fail the style tests.
 - [[https://adblockplus.org/faq_internal][ABP internal faq]]
 - [[https://www.loggly.com/blog/five-invaluable-techniques-to-improve-regex-performance/][Regexp performance tips]]
 - [[https://github.com/gorhill/uBlock/blob/261ef8c510fd91ead57948d1f7793a7a5e2a25fd/src/js/utils.js][uBlock tokenizer]]
+- [[https://github.com/gorhill/uBlock/wiki/uBlock-vs.-ABP:-efficiency-compared][ABP vs uBO latency]]
