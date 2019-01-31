@@ -28,10 +28,13 @@ class TokenConverter():
 	VALID_TOKEN_CHAR_RE = re.compile(r'[^0-9a-z%]+')
 
 	REGEX_TOKEN_RE = re.compile(r'[%0-9A-Za-z]{2,}')
+	# If we match this from start of the string, all hope is lost for this token and the rest
 	REGEX_TOKEN_ABORT = re.compile(r'[([]')
-	# These tokens won't interfere, they just slow us down.
+	# TODO find out if this blocks the case where we do *pattern
 	REGEX_BAD_PREFIX = re.compile(r'(^|[^\\]\.|[*?{}\\])$')
 	REGEX_BAD_SUFFIX = re.compile(r'^([^\]\.|\[dw]|[([{}?*]|$)')
+	# These tokens won't interfere with proper matching, they just slow us down.
+	# This needs tuning
 	BAD_TOKENS = frozenset(['com', 'http', 'https', 'icon', 'images', 'img',
 						   'js', 'net', 'news', 'www'])
 
@@ -70,4 +73,19 @@ class TokenConverter():
 		"""
 		tokens = []
 		for match in TokenConverter.REGEX_TOKEN_RE.finditer(s):
-			match = match.group(0)
+			# prefix is from the start of the string to the start of the match
+			prefix = s[0:match.start(0)]
+			suffix = s[match.end(0) + 1:]
+			match = match.group(0).lower()
+
+			# If we have any of these characters leading to our match, we cannot reliably get a substring (this token
+			# could be in an optional match or char class)
+			if TokenConverter.REGEX_TOKEN_ABORT.search(prefix):
+				return tokens
+
+			if (TokenConverter.REGEX_BAD_PREFIX.search(prefix) or
+				TokenConverter.REGEX_BAD_SUFFIX(suffix)):
+				# This token is unsuitable.
+				continue
+
+			tokens.append(match)
