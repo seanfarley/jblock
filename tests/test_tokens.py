@@ -66,3 +66,21 @@ def test_token_str_bench(benchmark):
 def test_token_int_bench(benchmark):
 	"""Looks like int hashing is slower than re split."""
 	benchmark(lambda: list(map(token.TokenConverter.url_to_tokens_int, TOKENS.keys())))
+
+
+# Bulk tests
+
+@pytest.mark.skip()
+def test_bulk_regexp_match():
+	tokens = []
+	with open("tests/data/easylist.txt") as f:
+		for line in f:
+			p = parser.JBlockRule(line)
+			if not p.matching_supported():
+				continue
+			r = p.regex
+			t = token.TokenConverter.regex_to_tokens(r)
+			if not t:
+				tokens.append(line)
+
+	print(tokens)

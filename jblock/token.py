@@ -20,6 +20,8 @@ import itertools
 import functools
 import operator
 
+from jblock import parser
+
 Token = str
 
 
@@ -81,7 +83,7 @@ class TokenConverter():
 	# 	return groups
 
 	@staticmethod
-	def str_token_to_int(s: str) -> int:
+	def str_token_to_int(s: str) -> typing.Iterator[int]:
 		"""Convert a string-based token into an int based token."""
 		return itertools.accumulate(bytearray(s, 'ascii'))
 
@@ -92,14 +94,12 @@ class TokenConverter():
 
 		https://github.com/gorhill/uBlock/blob/4f3aed6fe6347572c38ec9a293f933387b81e5de/src/js/static-net-filtering.js#L1921
 		"""
-		tokens = []
+		tokens = []  # type: typing.List[Token]
 		for match in TokenConverter.REGEX_TOKEN_RE.finditer(s):
 			# prefix is from the start of the string to the start of the match
 			prefix = s[0:match.start(0)]
 			suffix = s[match.end(0):]
 			match_str = match.group(0).lower()
-			if match_str == "banner":
-				breakpoint()
 
 			# If we have any of these characters leading to our match, we cannot reliably get a substring (this token
 			# could be in an optional match or char class)

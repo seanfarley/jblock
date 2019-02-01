@@ -43,10 +43,18 @@ import typing
 import itertools
 import functools
 import collections
+import enum
+
+from jblock import token
 
 class JBlockParseError(ValueError):
     pass
 
+
+class AnchorTypes(enum.Enum):
+	END = 1
+	START = 2
+	HOSTNAME = 3
 
 @attr.attributes(slots=True)
 class JBlockRule():
@@ -79,6 +87,7 @@ class JBlockRule():
 
 	raw_text = attr.attr(type=str)
 	rule_text = attr.attr(init=False, type=str)
+	is_regex = attr.attr(init=False, type=bool)
 	regex_re = attr.attr(init=False, type=typing.Optional[typing.Pattern], default=None)
 
 	is_comment = attr.attr(init=False, type=bool)
@@ -93,10 +102,13 @@ class JBlockRule():
 	options = attr.attr(init=False, type=typing.Dict)
 	regex = attr.attr(init=False, type=str)
 	_options_keys = attr.attr(init=False)
+	anchors = attr.attr(init=False, factory=set, type=typing.Set[AnchorTypes])
 
 
 	def __attrs_post_init__(self) -> None:
 		self.rule_text = self.raw_text.strip()
+		self.is_regex = self.rule_text.startswith('/') and self.rule_text.endswith('/')
+
 		if self.is_comment:
 			self.is_html_rule = self.is_exception = False
 		else:
@@ -115,6 +127,17 @@ class JBlockRule():
 			self.options = {}
 		self._options_keys = frozenset(self.options.keys()) - set(['match-case'])
 
+		# Set up anchoring
+		if self.rule_text:
+			if self.rule_text[-1] == '|':
+				self.anchors.add(AnchorTypes.END)
+			# || in the beginning means beginning of the domain name
+			if self.rule_text[:2] == '||':
+				self.anchors.add(AnchorTypes.HOSTNAME)
+			elif self.rule_text[0] == '|':
+				# | in the beginning means start of the address
+				self.anchors.add(AnchorTypes.START)
+
 		if self.is_comment or self.is_html_rule:
 			# TODO: add support for HTML rules.
 			# We should split the rule into URL and HTML parts,
@@ -122,6 +145,8 @@ class JBlockRule():
 			self.regex = ''
 		else:
 			self.regex = self.rule_to_regex(self.rule_text)
+
+
 
 	@classmethod
 	def _split_options(cls, options_text):
@@ -143,8 +168,7 @@ class JBlockRule():
 			return ("domain", cls._parse_domain_option(text))
 		return cls._parse_option_negation(text)
 
-	@classmethod
-	def rule_to_regex(cls, rule):
+	def rule_to_regex(self, rule):
 		"""
 		Convert AdBlock rule to a regular expression.
 		"""
@@ -175,12 +199,14 @@ class JBlockRule():
 		# * symbol
 		rule = rule.replace("*", ".*")
 
+		## TODO Support anchoring in a more efficient way
+
 		# | in the end means the end of the address
-		if rule[-1] == '|':
+		if AnchorTypes.END in self.anchors:
 			rule = rule[:-1] + '$'
 
 		# || in the beginning means beginning of the domain name
-		if rule[:2] == '||':
+		if AnchorTypes.HOSTNAME in self.anchors:
 			# XXX: it is better to use urlparse for such things,
 			# but urlparse doesn't give us a single regex.
 			# Regex is based on http://tools.ietf.org/html/rfc3986#appendix-B
@@ -189,7 +215,7 @@ class JBlockRule():
 				#          |  scheme    | of the domain     |
 				rule = r"^(?:[^:/?#]+:)?(?://(?:[^/?#]*\.)?)?" + rule[2:]
 
-		elif rule[0] == '|':
+		elif AnchorTypes.START in self.anchors:
 			# | in the beginning means start of the address
 			rule = '^' + rule[1:]
 
@@ -198,6 +224,20 @@ class JBlockRule():
 		rule = re.sub(r"(\|)[^$]", r"\|", rule)
 
 		return rule
+
+	def _to_tokens(self) -> typing.MutableSequence[token.Token]:
+		"""Convert rule to tokens as well as possible.
+
+		https://github.com/gorhill/uBlock/blob/4f3aed6fe6347572c38ec9a293f933387b81e5de/src/js/static-net-filtering.js#L1949
+
+		"""
+		if not self.matching_supported():
+			return []
+
+		if self.is_regex:
+			return token.TokenConverter.regex_to_tokens(self.regex)
+
+		# TODO support '*' regex?
 
 	def _url_matches(self, url):
 		if self.regex_re is None:
