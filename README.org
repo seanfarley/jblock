@@ -4,8 +4,12 @@
 ~jblock~ is a WIP. We'll see if it ever gets finished.
 
 * Installation
+** Dependencies
+- ~python3~
+- ~attrs~
 ** Tests
-Tests require ~pytest~ and ~pytest-benchmark~.
+- ~pytest~
+- ~pytest-benchmark~
 
 If you pass pep8, you fail the style tests.
 * Inspiration/Sources

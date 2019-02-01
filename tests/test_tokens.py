@@ -36,9 +36,11 @@ TOKENS = {
 # These patterns are not converted to regexps yet
 PATTERN_TOKENS = {
 	# TODO should img be in this token list?
-	"/banner/*/img^": ["banner"],
-	".theadtech.": ["theadtech"],
-	".to/ads/": ["to", "ads"],
+	r"\/watch\?key\=([\da-f]{32}($))": ["watch"],
+	r"https?:\/\/s3\.amazonaws\.com\/[0-9a-z]{57}\/((secure\.js|[0-9a-z]{10}))$": ["s3", "amazonaws", "com"],
+	r"wp-content\/plugins\/bsa-pro-scripteo": ["content", "plugins", "bsa", "pro"],
+	r"""http:\/\/[a-zA-Z0-9]+\.[a-z]+\/.*(?:[!"#$%&'()*+,:;<=>?@\/\^_`{|}~-]).*[a-zA-Z0-9]+/""": [],
+	r"/\:\/\/([0-9]{1,3}\.){3}[0-9]{1,3}/": [],
 }
 
 
@@ -60,6 +62,7 @@ def test_token_str_bench(benchmark):
 	benchmark(lambda: list(map(token.TokenConverter.url_to_tokens, TOKENS.keys())))
 
 
+@pytest.mark.skip()
 def test_token_int_bench(benchmark):
 	"""Looks like int hashing is slower than re split."""
 	benchmark(lambda: list(map(token.TokenConverter.url_to_tokens_int, TOKENS.keys())))

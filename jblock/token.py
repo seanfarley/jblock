@@ -74,13 +74,6 @@ class TokenConverter():
 	# Alternative generator based implementation
 	# @staticmethod
 	# def url_to_tokens_int(s: str) -> typing.MutableSet[int]:
-	# 	"""Alternative int token generation.
-
-	# 	Seems to be 2x slower than the re based solution on cpython, but 4x faster than re based solution on pypy.
-
-	# 	Based on this absolute mess:
-	# 	https://github.com/gorhill/uBlock/blob/261ef8c510fd91ead57948d1f7793a7a5e2a25fd/src/js/utils.js#L81
-	# 	"""
 	# 	tokens, arr = set(), bytearray(s, 'ascii')
 	# 	groups = itertools.groupby(arr, TokenConverter.VALID_TOKEN_CHARS_INT.__contains__)
 	# 	groups = filter(operator.itemgetter(0), groups)
@@ -103,8 +96,10 @@ class TokenConverter():
 		for match in TokenConverter.REGEX_TOKEN_RE.finditer(s):
 			# prefix is from the start of the string to the start of the match
 			prefix = s[0:match.start(0)]
-			suffix = s[match.end(0) + 1:]
+			suffix = s[match.end(0):]
 			match_str = match.group(0).lower()
+			if match_str == "banner":
+				breakpoint()
 
 			# If we have any of these characters leading to our match, we cannot reliably get a substring (this token
 			# could be in an optional match or char class)
