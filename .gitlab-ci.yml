@@ -20,8 +20,12 @@ cache:
 
 before_script:
   - python -V               # Print out python version for debugging
-  - pip install pytest-benchmark
+  - pip install pytest-benchmark mypy
 
 test:
   script:
-  - pytest
+    - pytest
+
+mypy:
+  script:
+    - mypy

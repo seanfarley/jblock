@@ -356,7 +356,7 @@ def test_rules_with_options(rules, results):
 
 
 def test_regex_rules():
-	rules = parser.JBlockRules(["/banner\d+/"])
+	rules = parser.JBlockRules([r"/banner\d+/"])
 	assert rules.should_block("banner123")
 	assert not rules.should_block("banners")
 

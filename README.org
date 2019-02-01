@@ -1,7 +1,7 @@
 
 * jblock - j's adblocker
 
-~jblock~ is a WIP. We'll see if it ever gets finished.
+~jblock~ is a WIP adblocker. We'll see if it ever gets finished.
 
 * Installation
 ** Dependencies
