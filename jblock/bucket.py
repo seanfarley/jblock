@@ -21,7 +21,7 @@ import collections
 
 import attr
 
-from jblock import parser, token
+from jblock import parser, token, domain_tools
 
 class JBlockBuckets():
 	"""Handle logic for maintaining and updating filter buckets."""
@@ -68,7 +68,7 @@ class JBlockBucket():
 
 		# "advanced" rules are rules with options,
 		# "basic" rules are rules without options
-		advanced_rules, basic_rules = JBlockBucket._split_iter(self.rules, lambda r: r.options)
+		advanced_rules, basic_rules = domain_tools.split_iter(self.rules, lambda r: r.options)
 
 		# Rules with domain option are handled separately:
 		# if user passes a domain we can discard all rules which
@@ -77,7 +77,7 @@ class JBlockBucket():
 		# rules which require our domain. If a rule doesn't require any
 		# domain.
 		# TODO: what about ~rules? Should we match them earlier?
-		domain_required_rules, non_domain_rules = JBlockBucket._split_iter(
+		domain_required_rules, non_domain_rules = domain_tools.split_iter(
 			advanced_rules,
 			lambda r: (
 				'domain' in r.options
@@ -86,15 +86,15 @@ class JBlockBucket():
 		)
 
 		# split rules into blacklists and whitelists
-		self.blacklist, self.whitelist = self._split_bw(basic_rules)
-		_combined = functools.partial(JBlockBucket._combined_regex)
+		self.blacklist, self.whitelist = domain_tools.split_bw(basic_rules)
+		_combined = functools.partial(domain_tools.combined_regex)
 		self.blacklist_re = _combined([r.regex for r in self.blacklist])
 		self.whitelist_re = _combined([r.regex for r in self.whitelist])
 
 		self.blacklist_with_options, self.whitelist_with_options = \
-			self._split_bw(non_domain_rules)
+			domain_tools.split_bw(non_domain_rules)
 		self.blacklist_require_domain, self.whitelist_require_domain = \
-			self._split_bw_domain(domain_required_rules)
+			domain_tools.split_bw_domain(domain_required_rules)
 
 	def should_block(self, url, options=None) -> bool:
 		# TODO: group rules with similar options and match them in bigger steps
@@ -141,9 +141,9 @@ class JBlockBucket():
 		rules = []
 		if 'domain' in options and domain_required_rules:
 			src_domain = options['domain']
-			for domain in token.TokenConverter._domain_variants(src_domain):
-				if domain in domain_required_rules:
-					rules.extend(domain_required_rules[domain])
+			for d in domain_tools.domain_variants(src_domain):
+				if d in domain_required_rules:
+					rules.extend(domain_required_rules[d])
 
 		rules.extend(rules_with_options)
 
@@ -154,40 +154,3 @@ class JBlockBucket():
 
 	def __len__(self):
 		return len(self.rules)
-
-	@classmethod
-	def _split_bw(cls, rules):
-		return JBlockBucket._split_iter(rules, lambda r: not r.is_exception)
-
-	@classmethod
-	def _split_bw_domain(cls, rules):
-		blacklist, whitelist = cls._split_bw(rules)
-		return cls._domain_index(blacklist), cls._domain_index(whitelist)
-
-	@classmethod
-	def _domain_index(cls, rules):
-		result = collections.defaultdict(list)
-		for rule in rules:
-			domains = rule.options.get('domain', {})
-			for domain, required in domains.items():
-				if required:
-					result[domain].append(rule)
-		return dict(result)
-
-	@staticmethod
-	def _combined_regex(regexes, flags=re.IGNORECASE):
-		"""
-		Return a compiled regex combined (using OR) from a list of ``regexes``.
-		If there is nothing to combine, None is returned.
-		"""
-		joined_regexes = "|".join(filter(None, regexes))
-		if not joined_regexes:
-			return None
-
-		return re.compile(joined_regexes, flags=flags)
-
-	@staticmethod
-	def _split_iter(iterable, fn):
-		"""Generate two iterables from a passed in one, one which passes pred and one which does not."""
-		pass_iter, fail_iter = itertools.tee(iterable)
-		return list(filter(fn, pass_iter)), list(itertools.filterfalse(fn, fail_iter))

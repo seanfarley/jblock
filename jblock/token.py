@@ -145,21 +145,3 @@ class TokenConverter():
 			else:
 				bad_tks = []
 		return tks or bad_tks
-
-
-	@staticmethod
-	def _domain_variants(domain):
-		"""
-		>>> list(_domain_variants("foo.bar.example.com"))
-		['foo.bar.example.com', 'bar.example.com', 'example.com']
-		>>> list(_domain_variants("example.com"))
-		['example.com']
-		>>> list(_domain_variants("localhost"))
-		['localhost']
-		"""
-		parts = domain.split('.')
-		if len(parts) == 1:
-			yield parts[0]
-		else:
-			for i in range(len(parts), 1, -1):
-				yield ".".join(parts[-i:])

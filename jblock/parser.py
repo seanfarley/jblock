@@ -46,7 +46,7 @@ import enum
 
 import attr
 
-from jblock import token
+from jblock import token, domain_tools
 
 
 class JBlockParseError(ValueError):
@@ -249,11 +249,11 @@ class JBlockRule():
 			self.regex_re = re.compile(self.regex)
 		return bool(self.regex_re.search(url))
 
-	def _domain_matches(self, domain):
+	def _domain_matches(self, d):
 		domain_rules = self.options['domain']
-		for domain in token.TokenConverter._domain_variants(domain):
-			if domain in domain_rules:
-				return domain_rules[domain]
+		for d in domain_tools.domain_variants(d):
+			if d in domain_rules:
+				return domain_rules[d]
 		return not any(domain_rules.values())
 
 	def match_url(self, url, options=None):
