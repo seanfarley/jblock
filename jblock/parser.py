@@ -1,4 +1,4 @@
-# Copyright (C) 2019  Jay Kamat
+# Copyright (C) 2019  Jay Kamat <jaygkamat@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -38,18 +38,19 @@
 
 
 import re
-import attr
 import typing
 import itertools
 import functools
 import collections
 import enum
 
+import attr
+
 from jblock import token
+
 
 class JBlockParseError(ValueError):
     pass
-
 
 class AnchorTypes(enum.Enum):
 	END = 1
@@ -103,7 +104,7 @@ class JBlockRule():
 	regex = attr.attr(init=False, type=str)
 	_options_keys = attr.attr(init=False)
 	anchors = attr.attr(init=False, factory=set, type=typing.Set[AnchorTypes])
-
+	tokens = attr.attr(init=False, type=typing.List[token.Token])
 
 	def __attrs_post_init__(self) -> None:
 		self.rule_text = self.raw_text.strip()
@@ -131,12 +132,15 @@ class JBlockRule():
 		if self.rule_text:
 			if self.rule_text[-1] == '|':
 				self.anchors.add(AnchorTypes.END)
+				self.rule_text = self.rule_text[:-1]
 			# || in the beginning means beginning of the domain name
 			if self.rule_text[:2] == '||':
 				self.anchors.add(AnchorTypes.HOSTNAME)
+				self.rule_text = self.rule_text[2:]
 			elif self.rule_text[0] == '|':
 				# | in the beginning means start of the address
 				self.anchors.add(AnchorTypes.START)
+				self.rule_text = self.rule_text[1:]
 
 		if self.is_comment or self.is_html_rule:
 			# TODO: add support for HTML rules.
@@ -144,9 +148,9 @@ class JBlockRule():
 			# convert URL part to a regex and parse the HTML part.
 			self.regex = ''
 		else:
-			self.regex = self.rule_to_regex(self.rule_text)
+			self.regex = self._rule_to_regex(self.rule_text)
 
-
+		self.tokens = self._to_tokens()
 
 	@classmethod
 	def _split_options(cls, options_text):
@@ -168,7 +172,7 @@ class JBlockRule():
 			return ("domain", cls._parse_domain_option(text))
 		return cls._parse_option_negation(text)
 
-	def rule_to_regex(self, rule):
+	def _rule_to_regex(self, rule):
 		"""
 		Convert AdBlock rule to a regular expression.
 		"""
@@ -203,21 +207,20 @@ class JBlockRule():
 
 		# | in the end means the end of the address
 		if AnchorTypes.END in self.anchors:
-			rule = rule[:-1] + '$'
+			rule = rule + '$'
 
 		# || in the beginning means beginning of the domain name
 		if AnchorTypes.HOSTNAME in self.anchors:
 			# XXX: it is better to use urlparse for such things,
 			# but urlparse doesn't give us a single regex.
 			# Regex is based on http://tools.ietf.org/html/rfc3986#appendix-B
-			if len(rule) > 2:
-				#          |            | complete part     |
-				#          |  scheme    | of the domain     |
-				rule = r"^(?:[^:/?#]+:)?(?://(?:[^/?#]*\.)?)?" + rule[2:]
+			#          |            | complete part     |
+			#          |  scheme    | of the domain     |
+			rule = r"^(?:[^:/?#]+:)?(?://(?:[^/?#]*\.)?)?" + rule
 
 		elif AnchorTypes.START in self.anchors:
 			# | in the beginning means start of the address
-			rule = '^' + rule[1:]
+			rule = '^' + rule
 
 		# other | symbols should be escaped
 		# we have "|$" in our regexp - do not touch it
@@ -233,11 +236,13 @@ class JBlockRule():
 		"""
 		if not self.matching_supported():
 			return []
-
 		if self.is_regex:
 			return token.TokenConverter.regex_to_tokens(self.regex)
-
 		# TODO support '*' regex?
+
+		if AnchorTypes.HOSTNAME in self.anchors and '*' not in self.rule_text:
+			return token.TokenConverter.hostname_match_to_tokens(self.rule_text)
+		return token.TokenConverter.generic_filter_to_tokens(self.rule_text)
 
 	def _url_matches(self, url):
 		if self.regex_re is None:
@@ -276,7 +281,7 @@ class JBlockRule():
 
 		return self._url_matches(url)
 
-	def matching_supported(self, options=None):
+	def matching_supported(self, options=None) -> bool:
 		"""Check if we support this rule."""
 		if self.is_comment:
 			return False
@@ -446,31 +451,11 @@ def _combined_regex(regexes, flags=re.IGNORECASE):
     Return a compiled regex combined (using OR) from a list of ``regexes``.
     If there is nothing to combine, None is returned.
     """
-    joined_regexes = "|".join(r for r in regexes if r)
+    joined_regexes = "|".join(filter(None, regexes))
     if not joined_regexes:
         return None
 
     return re.compile(joined_regexes, flags=flags)
-
-
-
-def __split_iter(iterable, pred):
-    """
-    Split data from ``iterable`` into two lists.
-    Each element is passed to function ``pred``; elements
-    for which ``pred`` returns True are put into ``yes`` list,
-    other elements are put into ``no`` list.
-
-    >>> split_data(["foo", "Bar", "Spam", "egg"], lambda t: t.istitle())
-    (['Bar', 'Spam'], ['foo', 'egg'])
-    """
-    yes, no = [], []
-    for d in iterable:
-        if pred(d):
-            yes.append(d)
-        else:
-            no.append(d)
-    return yes, no
 
 
 def _split_iter(iterable, fn):

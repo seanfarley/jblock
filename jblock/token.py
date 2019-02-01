@@ -1,4 +1,4 @@
-# Copyright (C) 2019  Jay Kamat
+# Copyright (C) 2019  Jay Kamat <jaygkamat@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -46,6 +46,10 @@ class TokenConverter():
 	# This needs tuning
 	BAD_TOKENS = frozenset(['com', 'http', 'https', 'icon', 'images', 'img',
 						   'js', 'net', 'news', 'www'])
+
+	HOSTNAME_TOKEN = re.compile(r'[0-9a-z]{2,}')
+
+	REGEX_GOOD_TOKEN = re.compile('[%0-9a-z]{2,}')
 
 	@staticmethod
 	def url_to_tokens(s: str) -> typing.MutableSequence[Token]:
@@ -114,3 +118,31 @@ class TokenConverter():
 			tokens.append(match_str)
 
 		return tokens
+
+	@staticmethod
+	def hostname_match_to_tokens(s: str) -> typing.MutableSequence[Token]:
+		"""Assume we have a hostname anchored rule, find all matches.
+		Assumes no wildcards at all."""
+		return TokenConverter.HOSTNAME_TOKEN.findall(s.lower())
+
+	@staticmethod
+	def generic_filter_to_tokens(s: str) -> typing.MutableSequence[Token]:
+		"""Convert a generic filter to tokens
+
+		https://github.com/gorhill/uBlock/blob/4f3aed6fe6347572c38ec9a293f933387b81e5de/src/js/static-net-filtering.js#L1895
+
+		"""
+		bad_tks = []
+		tks = []
+		for i in TokenConverter.REGEX_GOOD_TOKEN.finditer(s.lower()):
+			# If we match *TOKEN* then we have to throw it out, since we only match the largest match.
+			if i.start(0) > 0 and s[i.start(0) - 1] == '*':
+				continue
+			if i.end(0) < len(s) - 1 and s[i.end(0)] == '*':
+				continue
+			token = i.group(0)
+			if token not in TokenConverter.BAD_TOKENS:
+				tks.append(token)
+			else:
+				bad_tks = []
+		return tks or bad_tks
