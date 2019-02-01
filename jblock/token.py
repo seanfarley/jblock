@@ -20,8 +20,6 @@ import itertools
 import functools
 import operator
 
-from jblock import parser
-
 Token = str
 
 
@@ -44,8 +42,9 @@ class TokenConverter():
 	REGEX_BAD_SUFFIX = re.compile(r'^([^\\]\.|\\[dw]|[([{}?*]|$)')
 	# These tokens won't interfere with proper matching, they just slow us down.
 	# This needs tuning
-	BAD_TOKENS = frozenset(['com', 'http', 'https', 'icon', 'images', 'img',
-						   'js', 'net', 'news', 'www'])
+	BAD_TOKENS = frozenset(
+		['com', 'http', 'https', 'icon', 'images', 'img',
+		 'js', 'net', 'news', 'www'])
 
 	HOSTNAME_TOKEN = re.compile(r'[0-9a-z]{2,}')
 
@@ -146,3 +145,21 @@ class TokenConverter():
 			else:
 				bad_tks = []
 		return tks or bad_tks
+
+
+	@staticmethod
+	def _domain_variants(domain):
+		"""
+		>>> list(_domain_variants("foo.bar.example.com"))
+		['foo.bar.example.com', 'bar.example.com', 'example.com']
+		>>> list(_domain_variants("example.com"))
+		['example.com']
+		>>> list(_domain_variants("localhost"))
+		['localhost']
+		"""
+		parts = domain.split('.')
+		if len(parts) == 1:
+			yield parts[0]
+		else:
+			for i in range(len(parts), 1, -1):
+				yield ".".join(parts[-i:])

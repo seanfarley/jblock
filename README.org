@@ -5,13 +5,13 @@
 
 * Installation
 ** Dependencies
-- ~python3~
+- ~python3~ or ~pypy3~
 - ~attrs~
 ** Tests
-- ~pytest~
 - ~pytest-benchmark~
 
 If you pass pep8, you fail the style tests.
+
 * Inspiration/Sources
 - [[https://github.com/scrapinghub/adblockparser][adblockparser]]
 - [[https://adblockplus.org/filter-cheatsheet#options][adblock filter cheatsheet]]

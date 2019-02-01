@@ -24,7 +24,7 @@
 
 import pytest
 
-from jblock import parser
+from jblock import parser, bucket
 
 # examples are from https://adblockplus.org/en/filter-cheatsheet
 # and https://adblockplus.org/en/filters
@@ -316,7 +316,7 @@ def test_documented(rule_text, results):
 @pytest.mark.parametrize(('rule_text', 'results'), DOCUMENTED_TESTS.items())
 def test_documented_examples(rule_text, results):
 	rule = parser.JBlockRule(rule_text)
-	rules = parser.JBlockRules([rule_text])
+	rules = bucket.JBlockBuckets([rule_text])
 
 	for url in results["blocks"]:
 		assert rule.match_url(url)
@@ -329,7 +329,7 @@ def test_documented_examples(rule_text, results):
 
 @pytest.mark.parametrize(('rules', 'results'), RULE_EXCEPTION_TESTS.items())
 def test_rule_exceptions(rules, results):
-	rules = parser.JBlockRules(rules)
+	rules = bucket.JBlockBuckets(rules)
 
 	for url in results["blocks"]:
 		assert rules.should_block(url)
@@ -341,7 +341,7 @@ def test_rule_exceptions(rules, results):
 @pytest.mark.parametrize(('rule_text', 'results'), RULES_WITH_OPTIONS_TESTS.items())
 def test_rule_with_options(rule_text, results):
 	rule = parser.JBlockRule(rule_text)
-	rules = parser.JBlockRules([rule_text])
+	rules = bucket.JBlockBuckets([rule_text])
 
 	for url, params, match in results:
 		assert rule.match_url(url, params) == match
@@ -350,41 +350,41 @@ def test_rule_with_options(rule_text, results):
 
 @pytest.mark.parametrize(('rules', 'results'), MULTIRULES_WITH_OPTIONS_TESTS.items())
 def test_rules_with_options(rules, results):
-	rules = parser.JBlockRules(rules)
+	rules = bucket.JBlockBuckets(rules)
 	for url, params, should_block in results:
 		assert rules.should_block(url, params) == should_block
 
 
 def test_regex_rules():
-	rules = parser.JBlockRules([r"/banner\d+/"])
+	rules = bucket.JBlockBuckets([r"/banner\d+/"])
 	assert rules.should_block("banner123")
 	assert not rules.should_block("banners")
 
 
 def test_rules_supported_options():
-	rules = parser.JBlockRules(["adv", "@@advice.$~script"])
+	rules = bucket.JBlockBuckets(["adv", "@@advice.$~script"])
 	assert not rules.should_block("http://example.com/advice.html", {'script': False})
 
 	# exception rule should be discarded if "script" option is not supported
-	rules2 = parser.JBlockRules(["adv", "@@advice.$~script"], supported_options=[])
+	rules2 = bucket.JBlockBuckets(["adv", "@@advice.$~script"], supported_options=[])
 	assert rules2.should_block("http://example.com/advice.html", {'script': False})
 
 
 def test_rules_instantiation():
 	rule = parser.JBlockRule("adv")
-	rules = parser.JBlockRules([rule])
+	rules = bucket.JBlockBuckets([rule])
 	assert rule.match_url("http://example.com/adv")
 	assert rules.should_block("http://example.com/adv")
 
 
 def test_empty_rules():
-	rules = parser.JBlockRules(["adv", "", " \t", parser.JBlockRule("adv2")])
-	assert len(rules.rules) == 2
+	rules = bucket.JBlockBuckets(["adv", "", " \t", parser.JBlockRule("adv2")])
+	assert len(rules) == 2
 
 
 def test_empty_regexp_rules():
 	with pytest.raises(parser.JBlockParseError):
-		parser.JBlockRules(['adv', '/', '//'])
+		bucket.JBlockBuckets(['adv', '/', '//'])
 
 
 @pytest.mark.parametrize(('text', 'result'), SPLIT_OPTIONS_TESTS)
