@@ -18,6 +18,7 @@ import typing
 import functools
 import itertools
 import collections
+import pprint
 
 import attr
 
@@ -28,15 +29,38 @@ class JBlockBuckets():
 
 	def __init__(self, rules: typing.List[str], supported_options=parser.JBlockRule.OPTIONS):
 		# TODO use more than one bucket
+		self.rules = rules
 		self.supported_options = supported_options
-		self.bucket = JBlockBucket(rules, supported_options=supported_options)
+		self.buckets = {}
+		self._gen_buckets()
+
+	def _gen_buckets(self):
+		for r in self.rules:
+			rule = parser.JBlockRule(r)
+			if not rule.matching_supported():
+				continue
+			t = self._pick_token(rule)
+			if t is None:
+				assert False
+			if t not in self.buckets:
+				self.buckets[t] = []
+			self.buckets[t].append(r)
+		pprint.pprint(self.buckets)
+
+
+	def _pick_token(self, rule):
+		if rule.tokens:
+			return rule.tokens[0]
+		return None
 
 
 	def should_block(self, url, options=None) -> bool:
 		return self.bucket.should_block(url, options)
 
 	def __len__(self):
-		return len(self.bucket)
+		# FIXME
+		return 0
+		# return len(self.bucket)
 
 
 @attr.attributes(slots=True)
