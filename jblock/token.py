@@ -132,8 +132,8 @@ class TokenConverter():
 		https://github.com/gorhill/uBlock/blob/4f3aed6fe6347572c38ec9a293f933387b81e5de/src/js/static-net-filtering.js#L1895
 
 		"""
-		bad_tks = []
-		tks = []
+		bad_tks = []  # type: typing.List[Token]
+		tks = []  # type: typing.List[Token]
 		for i in TokenConverter.REGEX_GOOD_TOKEN.finditer(s.lower()):
 			# If we match *TOKEN* then we have to throw it out, since we only match the largest match.
 			if i.start(0) > 0 and s[i.start(0) - 1] == '*':

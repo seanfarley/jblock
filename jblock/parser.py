@@ -104,7 +104,7 @@ class JBlockRule():
 	regex = attr.attr(init=False, type=str)
 	_options_keys = attr.attr(init=False)
 	anchors = attr.attr(init=False, factory=set, type=typing.Set[AnchorTypes])
-	tokens = attr.attr(init=False, type=typing.List[token.Token])
+	tokens = attr.attr(init=False, type=typing.MutableSequence[token.Token])
 
 	def __attrs_post_init__(self) -> None:
 		self.rule_text = self.raw_text.strip()
