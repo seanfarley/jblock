@@ -24,50 +24,6 @@ import attr
 
 from jblock import parser, token, domain_tools
 
-class JBlockBuckets():
-	"""Handle logic for maintaining and updating filter buckets."""
-
-	def __init__(self, rules: typing.List[str], supported_options=parser.JBlockRule.OPTIONS):
-		# TODO use more than one bucket
-		self.rules = rules
-		self.supported_options = supported_options
-		self.blacklist_buckets = {}  # type: Dict[token.Token, JBlockBucket]
-		self.whitelist_buckets = {}  # type: Dict[token.Token, JBlockBucket]
-		self.fallback_bucket = JBlockBucket()
-		self._gen_buckets()
-
-	def _gen_buckets(self):
-		for r in self.rules:
-			if isinstance(r, parser.JBlockRule):
-				rule = r
-			else:
-				rule = parser.JBlockRule(r)
-			if not rule.matching_supported():
-				continue
-			t = self._pick_token(rule)
-			if t is None:
-				assert False
-			if t not in self.buckets:
-				self.buckets[t] = []
-			self.buckets[t].append(r)
-		pprint.pprint(self.buckets)
-
-
-	def _pick_token(self, rule):
-		if rule.tokens:
-			return rule.tokens[0]
-		return None
-
-
-	def should_block(self, url, options=None) -> bool:
-		# TODO need whitelist, blacklist and fallback buckets
-		return self.bucket.should_block(url, options)
-
-	def __len__(self):
-		# FIXME
-		return 0
-		# return len(self.bucket)
-
 @attr.attributes(slots=True)
 class JBlockBucket():
 	"""Class representing a single bucket."""
@@ -195,3 +151,48 @@ ie: an accept and a fail bucket, all with one tag.
 	token = attr.attr(type=token.Token)
 	blacklist = attr.attr(default=attr.Factory(JBlockBucket))
 	whitelist = attr.attr(default=attr.Factory(JBlockBucket))
+
+
+class JBlockBuckets():
+	"""Handle logic for maintaining and updating filter buckets."""
+
+	def __init__(self, rules: typing.List[str], supported_options=parser.JBlockRule.OPTIONS):
+		# TODO use more than one bucket
+		self.rules = rules
+		self.supported_options = supported_options
+		self.blacklist_buckets = {}  # type: Dict[token.Token, JBlockBucketGroup]
+		self.whitelist_buckets = {}  # type: Dict[token.Token, JBlockBucketGroup]
+		self.fallback_bucket = JBlockBucket()
+		self._gen_buckets()
+
+	def _gen_buckets(self):
+		for r in self.rules:
+			if isinstance(r, parser.JBlockRule):
+				rule = r
+			else:
+				rule = parser.JBlockRule(r)
+			if not rule.matching_supported():
+				continue
+			t = self._pick_token(rule)
+			if t is None:
+				assert False
+			if t not in self.buckets:
+				self.buckets[t] = []
+			self.buckets[t].append(r)
+		pprint.pprint(self.buckets)
+
+
+	def _pick_token(self, rule):
+		if rule.tokens:
+			return rule.tokens[0]
+		return None
+
+
+	def should_block(self, url, options=None) -> bool:
+		# TODO need whitelist, blacklist and fallback buckets
+		return self.bucket.should_block(url, options)
+
+	def __len__(self):
+		# FIXME
+		return 0
+		# return len(self.bucket)
