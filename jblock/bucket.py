@@ -31,12 +31,17 @@ class JBlockBuckets():
 		# TODO use more than one bucket
 		self.rules = rules
 		self.supported_options = supported_options
-		self.buckets = {}
+		self.blacklist_buckets = {}  # type: Dict[token.Token, JBlockBucket]
+		self.whitelist_buckets = {}  # type: Dict[token.Token, JBlockBucket]
+		self.fallback_bucket = JBlockBucket()
 		self._gen_buckets()
 
 	def _gen_buckets(self):
 		for r in self.rules:
-			rule = parser.JBlockRule(r)
+			if isinstance(r, parser.JBlockRule):
+				rule = r
+			else:
+				rule = parser.JBlockRule(r)
 			if not rule.matching_supported():
 				continue
 			t = self._pick_token(rule)
@@ -55,13 +60,13 @@ class JBlockBuckets():
 
 
 	def should_block(self, url, options=None) -> bool:
+		# TODO need whitelist, blacklist and fallback buckets
 		return self.bucket.should_block(url, options)
 
 	def __len__(self):
 		# FIXME
 		return 0
 		# return len(self.bucket)
-
 
 @attr.attributes(slots=True)
 class JBlockBucket():
@@ -178,3 +183,15 @@ class JBlockBucket():
 
 	def __len__(self):
 		return len(self.rules)
+
+
+@attr.attributes(slots=True)
+class JBlockBucketGroup():
+	"""Class representing a group of buckets.
+
+ie: an accept and a fail bucket, all with one tag.
+
+	"""
+	token = attr.attr(type=token.Token)
+	blacklist = attr.attr(default=attr.Factory(JBlockBucket))
+	whitelist = attr.attr(default=attr.Factory(JBlockBucket))
