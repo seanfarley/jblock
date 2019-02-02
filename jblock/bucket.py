@@ -31,7 +31,6 @@ class JBlockBucket():
 
 	rules = attr.attr(type=typing.MutableSequence[typing.Union[parser.JBlockRule]])
 	supported_options = attr.attr(default=parser.JBlockRule.OPTIONS)
-	skip_unsupported_rules = attr.attr(default=True, type=bool)
 	matchlist = attr.attr(init=False)
 	matchlist_re = attr.attr(init=False)
 	matchlist_with_options = attr.attr(init=False)
@@ -109,9 +108,6 @@ class JBlockBucket():
 					rules.extend(domain_required_rules[d])
 
 		rules.extend(rules_with_options)
-
-		if self.skip_unsupported_rules:
-			rules = [rule for rule in rules if rule.matching_supported(options)]
 
 		return any(rule.match_url(url, options) for rule in rules)
 

@@ -272,7 +272,8 @@ class JBlockRule():
 				continue
 
 			if optname not in options:
-				raise ValueError("Rule requires option %s" % optname)
+				return False
+				# raise ValueError("Rule requires option %s" % optname)
 
 			if optname == 'domain':
 				if not self._domain_matches(options['domain']):
