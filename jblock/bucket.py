@@ -74,9 +74,9 @@ class JBlockBucket():
 		self.matchlist_require_domain = domain_required_rules
 
 	def hit(self, url, options=None):
-		if len(self) == 0:
+		if len(self.rules) == 0:
 			return False
-		options = options or {}
+		options = options or frozenset()
 		return self._matches(
 			url, options,
 			self.matchlist_re,
@@ -147,12 +147,13 @@ class JBlockBuckets():
 	def _gen_buckets(self):
 		bucket_agg = collections.defaultdict(list)
 		fallback_rules = []
+		s_opt_dict = dict(map(lambda v: (v, True), self.supported_options))
 		for r in self.rules:
 			if isinstance(r, parser.JBlockRule):
 				rule = r
 			else:
 				rule = parser.JBlockRule(r)
-			if not rule.matching_supported():
+			if not rule.matching_supported(s_opt_dict):
 				self.unsupported_rules.append(r)
 				continue
 			t = self._pick_token(rule)
@@ -162,6 +163,7 @@ class JBlockBuckets():
 		for k, v in bucket_agg.items():
 			self.bucket_groups[k] = self._rule_list_to_bucket_group(k, v)
 		self.fallback_bucket_group = self._rule_list_to_bucket_group("", fallback_rules)  # type: JBlockBucketGroup
+		# import pprint
 		# pprint.pprint(bucket_agg)
 		# pprint.pprint(sorted(list(map(len, bucket_agg.values()))))
 		# pprint.pprint(fallback_rules)

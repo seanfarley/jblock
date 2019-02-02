@@ -43,6 +43,14 @@ PATTERN_TOKENS = {
 	r"/\:\/\/([0-9]{1,3}\.){3}[0-9]{1,3}/": [],
 }
 
+GENERIC_TOKENS = {
+	# TODO should img be in this token list?
+	r"adv": [],
+	r"/adcss/*": ["adcss"],
+	r"/adplay.": ["adplay"],
+	r"/cdn-cgi/pe/bag2?r*popads.net": ["cgi", "pe", "bag2"],
+}
+
 
 @pytest.mark.parametrize(('url', 'tokens'), TOKENS.items())
 def test_token_basic(url, tokens):
@@ -55,6 +63,11 @@ def test_pattern_token_basic(pattern, tokens):
 	t = token.TokenConverter.regex_to_tokens(re)
 	assert t == tokens
 
+
+@pytest.mark.parametrize(('pattern', 'tokens'), GENERIC_TOKENS.items())
+def test_pattern_token_basic(pattern, tokens):
+	t = parser.JBlockRule(pattern).tokens
+	assert t == tokens
 
 ## Benchmarks
 

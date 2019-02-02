@@ -242,7 +242,10 @@ class JBlockRule():
 
 		if AnchorTypes.HOSTNAME in self.anchors and '*' not in self.rule_text:
 			return token.TokenConverter.hostname_match_to_tokens(self.rule_text)
-		return token.TokenConverter.generic_filter_to_tokens(self.rule_text)
+		return token.TokenConverter.generic_filter_to_tokens(
+			self.rule_text,
+			AnchorTypes.START in self.anchors or AnchorTypes.HOSTNAME in self.anchors,
+			AnchorTypes.END in self.anchors)
 
 	def _url_matches(self, url):
 		if self.regex_re is None:

@@ -125,10 +125,13 @@ class TokenConverter():
 		return TokenConverter.HOSTNAME_TOKEN.findall(s.lower())
 
 	@staticmethod
-	def generic_filter_to_tokens(s: str) -> typing.MutableSequence[Token]:
+	def generic_filter_to_tokens(
+			s: str, allow_left: bool, allow_right: bool) -> typing.MutableSequence[Token]:
 		"""Convert a generic filter to tokens
 
 		https://github.com/gorhill/uBlock/blob/4f3aed6fe6347572c38ec9a293f933387b81e5de/src/js/static-net-filtering.js#L1895
+
+		allow_left/allow_right control if we are allowed to get tokens on the hard left/right (need anchors)
 
 		"""
 		bad_tks = []  # type: typing.List[Token]
@@ -138,6 +141,10 @@ class TokenConverter():
 			if i.start(0) > 0 and s[i.start(0) - 1] == '*':
 				continue
 			if i.end(0) < len(s) - 1 and s[i.end(0)] == '*':
+				continue
+			if i.end(0) >= len(s) and not allow_right:
+				continue
+			if i.start(0) == 0 and not allow_left:
 				continue
 			token = i.group(0)
 			if token not in TokenConverter.BAD_TOKENS:
