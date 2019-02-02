@@ -1,7 +1,55 @@
 
 * jblock - j's adblocker
 
-~jblock~ is a WIP adblocker. We'll see if it ever gets finished.
+~jblock~ is a WIP adblocking library, created for learning and for necessity. It
+was created because [[https://github.com/scrapinghub/adblockparser][adblockparser]] was inefficiently designed, and because
+adblocking is a lot more interesting than you might think!
+
+* Performance
+
+Currently (with easylist), it seems like the average performance is somewhere
+in-between adblock plus and ublock origin (about an overhead of ~0.2 ms per
+request). However, there are a couple pathalogical cases which can cause the
+latency to spike up to ~10ms.
+
+Seeing as I only spent a couple hours optimizing this so far (aside from the
+initial design), I think we can beat ubo if we have better balancing of filter
+buckets (and even less reliance on python ~re~).
+
+However, if you care about performance at all, you shouldn't be using a abp
+style adblocker at all. even ~0.1ms overhead per request is extremely high,
+considering that a trivial inefficient python host blocker is an order of
+magnitude faster for almost the same results.
+
+Here's an example of the overhead added for hashing (the minimum for every
+request), an optimal match, and a pathalogical case.
+
+#+begin_example
+-------------------------------------------------------------------------------------------- benchmark: 3 tests --------------------------------------------------------------------------------------------
+Name (time in us)               Min                   Max                  Mean              StdDev                Median                 IQR            Outliers          OPS            Rounds  Iterations
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+test_token_str_bench        12.1200 (1.0)         30.1600 (1.0)         12.5919 (1.0)        0.7255 (1.0)         12.5000 (1.0)        0.1200 (1.0)     2468;4210  79,416.2722 (1.0)       55525           1
+test_block[0]               35.0700 (2.89)        71.5200 (2.37)        38.5589 (3.06)       3.8416 (5.30)        36.3800 (2.91)       5.1900 (43.25)     268;156  25,934.3502 (0.33)       8930           1
+test_pass[0]             1,693.7130 (139.75)   2,984.8430 (98.97)    1,786.6670 (141.89)   139.6831 (192.54)   1,723.5030 (137.88)   146.7500 (>1000.0)     42;13     559.7014 (0.01)        554           1
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#+end_example
+
+* Correctness
+
+Honestly, I have no clue. There's not much large datasets to compare against,
+but this (at least) passes the examples in the abp spec.
+
+I suspect there is some questionable logic in whitelisting domains.
+
+* Features
+
+Currently, I'm targeting a subset of the adblockplus filter spec. Right now, we
+don't support (not an exhaustive list)
+
+- ALL Element Hiding
+- ~donottrack~
+- ~match-case~
+- ~rewrite~
 
 * Installation
 ** Dependencies
@@ -11,6 +59,16 @@
 - ~pytest-benchmark~
 
 If you pass pep8, you fail the style tests.
+
+** qutebrowser
+This snippet in config.py seems to work for now. It pulls easylist from this
+repo. Please don't depend on anything here, it's all hacky and not done :].
+
+#+begin_src python
+  import sys, os
+  sys.path.append(os.path.join(sys.path[0], 'jblock'))
+  config.source("jblock/jblock/integrations/qutebrowser.py")
+#+end_src
 
 * Inspiration/Sources
 - [[https://github.com/scrapinghub/adblockparser][adblockparser]]
@@ -30,4 +88,5 @@ If you pass pep8, you fail the style tests.
 * License
 jblock is licensed under the GPLv3+.
 
-Some work was adapted from scrapinghub/adblockparser, but the combined work is GPLv3+.
+Some work was adapted from scrapinghub/adblockparser (which has almost all been
+completely rewritten), but the combined work is GPLv3+.
