@@ -1,9 +1,20 @@
 
 * jblock - j's adblocker
 
-~jblock~ is a WIP adblocking library, created for learning and for necessity. It
-was created because [[https://github.com/scrapinghub/adblockparser][adblockparser]] was inefficiently designed, and because
-adblocking is a lot more interesting than you might think!
+~jblock~ is a WIP adblocking library for python, created for learning and for
+necessity. It was created because [[https://github.com/scrapinghub/adblockparser][adblockparser]] was inefficiently designed, and
+because adblocking is a lot more interesting than you might think! Eventually,
+this aims to be a possible option for more powerful adblocking for [[https://github.com/qutebrowser/qutebrowser][qutebrowser]].
+
+If you are interested in adblocking, let me know (I hang out in ~#qutebrowser~),
+and I might make a blog post talking about adblocking strategies. Unfortunately,
+there's very little good recent documentation, and the ubo/abp codebases aren't
+very well documented either.
+
+[[https://www.youtube.com/watch?v=Bd29bqfuCSc&feature=youtu.be][Here's a demo, but expect it to be outdated very quickly]].
+
+Don't build anything on this yet, I expect to redo the API (which still mirrors
+the adblockparesr api) to be more efficient.
 
 * Performance
 
@@ -21,8 +32,8 @@ style adblocker at all. even ~0.1ms overhead per request is extremely high,
 considering that a trivial inefficient python host blocker is an order of
 magnitude faster for almost the same results.
 
-Here's an example of the overhead added for hashing (the minimum for every
-request), an optimal match, and a pathalogical case.
+Here's an example of the overhead added for token generation (the absolute
+minimum for every request), an optimal match, and a pathalogical case.
 
 #+begin_example
 -------------------------------------------------------------------------------------------- benchmark: 3 tests --------------------------------------------------------------------------------------------
@@ -34,9 +45,18 @@ test_pass[0]             1,693.7130 (139.75)   2,984.8430 (98.97)    1,786.6670 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #+end_example
 
+Unfortunately, there's currently a regression from cpython when running with
+pypy, as it looks like pypy is slower than cpython when running ~re~.
+
+Performance of loading lists is abysmal currently, with loading easylist taking
+about 2 seconds.
+
+This is almost certainly extremely inefficient on memory, as I'm storing a ton
+of debug information for no reason.
+
 * Correctness
 
-Honestly, I have no clue. There's not much large datasets to compare against,
+Honestly, I have no clue. There's not much in large datasets to compare against,
 but this (at least) passes the examples in the abp spec.
 
 I suspect there is some questionable logic in whitelisting domains.
@@ -51,6 +71,11 @@ don't support (not an exhaustive list)
 - ~match-case~
 - ~rewrite~
 
+I don't do any work to automatically detect host style lists at the moment
+either.
+
+Unsupported rules are silently ignored.
+
 * Installation
 ** Dependencies
 - ~python3~ or ~pypy3~
@@ -61,8 +86,12 @@ don't support (not an exhaustive list)
 If you pass pep8, you fail the style tests.
 
 ** qutebrowser
-This snippet in config.py seems to work for now. It pulls easylist from this
-repo. Please don't depend on anything here, it's all hacky and not done :].
+This snippet in config.py seems to work for now on the git version of
+qutebrowser. It PULLS EASYLIST FROM THIS REPO and not from the web. If you run
+~:config-source~ it will reinit everything, causing double latency and memory
+usage (so don't do it). Please don't depend on anything here, it's all hacky and not done ~:]~.
+
+most options won't be supported until [[https://github.com/qutebrowser/qutebrowser/pull/4525][this pull request]] is finalized.
 
 #+begin_src python
   import sys, os
