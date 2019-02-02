@@ -114,7 +114,7 @@ class JBlockRule():
 			self.is_html_rule = self.is_exception = False
 		else:
 			# should we use single pound here too?
-			self.is_html_rule = '##' in self.rule_text or '#@#' in self.rule_text
+			self.is_html_rule = '##' in self.rule_text or '#@#' in self.rule_text or '#?#' in self.rule_text
 			self.is_exception = self.rule_text.startswith('@@')
 			if self.is_exception:
 				self.rule_text = self.rule_text[2:]

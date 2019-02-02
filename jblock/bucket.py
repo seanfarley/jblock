@@ -28,9 +28,9 @@ from jblock import parser, token, domain_tools
 class JBlockBucket():
 	"""Class representing a single bucket."""
 
-	rules = attr.attr(type=typing.MutableSequence[str])
+	rules = attr.attr(type=typing.MutableSequence[typing.Union[parser.JBlockRule]])
 	supported_options = attr.attr(default=parser.JBlockRule.OPTIONS)
-	skip_unsupported_rules = attr.attr(default=True)
+	skip_unsupported_rules = attr.attr(default=True, type=bool)
 	blacklist = attr.attr(init=False)
 	blacklist_re = attr.attr(init=False)
 	whitelist = attr.attr(init=False)
@@ -148,9 +148,12 @@ class JBlockBucketGroup():
 ie: an accept and a fail bucket, all with one tag.
 
 	"""
-	token = attr.attr(type=token.Token)
+	bucket_token = attr.attr(type=token.Token)
 	blacklist = attr.attr(default=attr.Factory(JBlockBucket))
 	whitelist = attr.attr(default=attr.Factory(JBlockBucket))
+
+	def __len__(self):
+		return len(self.blacklist) + len(self.whitelist)
 
 
 class JBlockBuckets():
@@ -159,27 +162,50 @@ class JBlockBuckets():
 	def __init__(self, rules: typing.List[str], supported_options=parser.JBlockRule.OPTIONS):
 		# TODO use more than one bucket
 		self.rules = rules
+		self.unsupported_rules = []  # type: typing.List[token.Token]
 		self.supported_options = supported_options
-		self.blacklist_buckets = {}  # type: Dict[token.Token, JBlockBucketGroup]
-		self.whitelist_buckets = {}  # type: Dict[token.Token, JBlockBucketGroup]
-		self.fallback_bucket = JBlockBucket()
+		self.bucket_groups = {}  # type: typing.Dict[token.Token, JBlockBucketGroup]
 		self._gen_buckets()
 
 	def _gen_buckets(self):
+		bucket_agg = collections.defaultdict(list)
+		fallback_rules = []
 		for r in self.rules:
 			if isinstance(r, parser.JBlockRule):
 				rule = r
 			else:
 				rule = parser.JBlockRule(r)
 			if not rule.matching_supported():
+				self.unsupported_rules.append(r)
 				continue
 			t = self._pick_token(rule)
 			if t is None:
-				assert False
-			if t not in self.buckets:
-				self.buckets[t] = []
-			self.buckets[t].append(r)
-		pprint.pprint(self.buckets)
+				fallback_rules.append(rule)
+			bucket_agg[t].append(rule)
+		for k, v in bucket_agg.items():
+			self.bucket_groups[k] = self._rule_list_to_bucket_group(k, v)
+		self.fallback_bucket_group = self._rule_list_to_bucket_group("", fallback_rules)  # type: JBlockBucketGroup
+		# pprint.pprint(bucket_agg)
+		# pprint.pprint(sorted(list(map(len, bucket_agg.values()))))
+		# pprint.pprint(fallback_rules)
+		# for k, v in bucket_agg.items():
+		# 	if len(v) > 50:
+		# 		print(k)
+		# 		print(v)
+
+	def _rule_list_to_bucket_group(
+			self, bucket_token: token.Token,
+			rule_list: typing.List[parser.JBlockRule]) -> JBlockBucketGroup:
+		"""Generate a bucket group from a list of block rules and a token"""
+		blacklist = []
+		whitelist = []
+		for rule in rule_list:
+			if rule.is_exception:
+				whitelist.append(rule)
+			else:
+				blacklist.append(rule)
+		return JBlockBucketGroup(
+			bucket_token, JBlockBucket(blacklist), JBlockBucket(whitelist))
 
 
 	def _pick_token(self, rule):
@@ -188,11 +214,36 @@ class JBlockBuckets():
 		return None
 
 
-	def should_block(self, url, options=None) -> bool:
-		# TODO need whitelist, blacklist and fallback buckets
-		return self.bucket.should_block(url, options)
+	def should_block(self, url: str, options=None) -> bool:
+		"""Decide if we should block a URL with OPTIONS.
+		Probabilities are: No Hit, Hit on Block, Hit on Block with Override
+
+		So:
+		1. Check all blacklist filters
+		2. Check all whitelist filters (if that hit)"""
+		breakpoint()
+		tokens, block = token.TokenConverter.url_to_tokens(url), False
+		for t in tokens:
+			group = self.bucket_groups.get(t, None)
+			if group and group.blacklist.should_block(url, options):
+				block = True
+				break
+
+		if not block:
+			block = self.fallback_bucket_group.blacklist.should_block(url, options)
+
+		if not block:
+			return False
+
+		for t in tokens:
+			group = self.bucket_groups.get(t, None)
+			if group and not group.whitelist.should_block(url, options):
+				block = False
+				break
+		if block:
+			block = self.fallback_bucket_group.whitelist.should_block(url, options)
+
+		return block
 
 	def __len__(self):
-		# FIXME
-		return 0
-		# return len(self.bucket)
+		return sum(map(len, self.bucket_groups.values())) + len(self.fallback_bucket_group)

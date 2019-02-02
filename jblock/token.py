@@ -41,10 +41,10 @@ class TokenConverter():
 	REGEX_BAD_PREFIX = re.compile(r'(^|[^\\]\.|[*?{}\\])$')
 	REGEX_BAD_SUFFIX = re.compile(r'^([^\\]\.|\\[dw]|[([{}?*]|$)')
 	# These tokens won't interfere with proper matching, they just slow us down.
-	# This needs tuning
+	# This needs to be automatically generated, this is not good.
 	BAD_TOKENS = frozenset(
 		['com', 'http', 'https', 'icon', 'images', 'img',
-		 'js', 'net', 'news', 'www'])
+		 'js', 'net', 'news', 'www', 'ad', 'ads', 'adv', 'banner', 'cdn'])
 
 	HOSTNAME_TOKEN = re.compile(r'[0-9a-z]{2,}')
 
@@ -143,5 +143,5 @@ class TokenConverter():
 			if token not in TokenConverter.BAD_TOKENS:
 				tks.append(token)
 			else:
-				bad_tks = []
+				bad_tks.append(token)
 		return tks or bad_tks
