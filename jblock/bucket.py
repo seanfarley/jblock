@@ -18,6 +18,7 @@ import typing
 import functools
 import itertools
 import collections
+import operator
 import pprint
 
 import attr
@@ -31,14 +32,10 @@ class JBlockBucket():
 	rules = attr.attr(type=typing.MutableSequence[typing.Union[parser.JBlockRule]])
 	supported_options = attr.attr(default=parser.JBlockRule.OPTIONS)
 	skip_unsupported_rules = attr.attr(default=True, type=bool)
-	blacklist = attr.attr(init=False)
-	blacklist_re = attr.attr(init=False)
-	whitelist = attr.attr(init=False)
-	whitelist_re = attr.attr(init=False)
-	blacklist_with_options = attr.attr(init=False)
-	whitelist_with_options = attr.attr(init=False)
-	blacklist_require_domain = attr.attr(init=False)
-	whitelist_require_domain = attr.attr(init=False)
+	matchlist = attr.attr(init=False)
+	matchlist_re = attr.attr(init=False)
+	matchlist_with_options = attr.attr(init=False)
+	matchlist_require_domain = attr.attr(init=False)
 
 
 	def __attrs_post_init__(self):
@@ -53,7 +50,7 @@ class JBlockBucket():
 
 		# "advanced" rules are rules with options,
 		# "basic" rules are rules without options
-		advanced_rules, basic_rules = domain_tools.split_iter(self.rules, lambda r: r.options)
+		advanced_rules, self.matchlist = domain_tools.split_iter(self.rules, lambda r: r.options)
 
 		# Rules with domain option are handled separately:
 		# if user passes a domain we can discard all rules which
@@ -70,41 +67,21 @@ class JBlockBucket():
 			)
 		)
 
-		# split rules into blacklists and whitelists
-		self.blacklist, self.whitelist = domain_tools.split_bw(basic_rules)
 		_combined = functools.partial(domain_tools.combined_regex)
-		self.blacklist_re = _combined([r.regex for r in self.blacklist])
-		self.whitelist_re = _combined([r.regex for r in self.whitelist])
+		self.matchlist_re = _combined(map(operator.attrgetter('regex'),
+										  self.matchlist))
+		self.matchlist_with_options = non_domain_rules
+		self.matchlist_require_domain = domain_required_rules
 
-		self.blacklist_with_options, self.whitelist_with_options = \
-			domain_tools.split_bw(non_domain_rules)
-		self.blacklist_require_domain, self.whitelist_require_domain = \
-			domain_tools.split_bw_domain(domain_required_rules)
-
-	def should_block(self, url, options=None) -> bool:
-		# TODO: group rules with similar options and match them in bigger steps
-		options = options or {}
-		if self._is_whitelisted(url, options):
+	def hit(self, url, options=None):
+		if len(self) == 0:
 			return False
-		if self._is_blacklisted(url, options):
-			return True
-		return False
-
-	def _is_whitelisted(self, url, options):
+		options = options or {}
 		return self._matches(
 			url, options,
-			self.whitelist_re,
-			self.whitelist_require_domain,
-			self.whitelist_with_options
-		)
-
-	def _is_blacklisted(self, url, options):
-		return self._matches(
-			url, options,
-			self.blacklist_re,
-			self.blacklist_require_domain,
-			self.blacklist_with_options
-		)
+			self.matchlist_re,
+			self.matchlist_require_domain,
+			self.matchlist_with_options)
 
 	def _matches(self, url, options,
 				 general_re, domain_required_rules, rules_with_options):
@@ -221,27 +198,26 @@ class JBlockBuckets():
 		So:
 		1. Check all blacklist filters
 		2. Check all whitelist filters (if that hit)"""
-		breakpoint()
 		tokens, block = token.TokenConverter.url_to_tokens(url), False
 		for t in tokens:
 			group = self.bucket_groups.get(t, None)
-			if group and group.blacklist.should_block(url, options):
+			if group and group.blacklist.hit(url, options):
 				block = True
 				break
 
 		if not block:
-			block = self.fallback_bucket_group.blacklist.should_block(url, options)
+			block = self.fallback_bucket_group.blacklist.hit(url, options)
 
 		if not block:
 			return False
 
 		for t in tokens:
 			group = self.bucket_groups.get(t, None)
-			if group and not group.whitelist.should_block(url, options):
+			if group and group.whitelist.hit(url, options):
 				block = False
 				break
 		if block:
-			block = self.fallback_bucket_group.whitelist.should_block(url, options)
+			block = not self.fallback_bucket_group.whitelist.hit(url, options)
 
 		return block
 
