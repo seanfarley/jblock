@@ -87,9 +87,10 @@ If you pass pep8, you fail the style tests.
 
 ** qutebrowser
 This snippet in config.py seems to work for now on the git version of
-qutebrowser. It PULLS EASYLIST FROM THIS REPO and not from the web. If you run
-~:config-source~ it will reinit everything, causing double latency and memory
-usage (so don't do it). Please don't depend on anything here, it's all hacky and not done ~:]~.
+qutebrowser, if you clone this repo in the config directory. It PULLS EASYLIST
+FROM THIS REPO and not from the web. If you run ~:config-source~ it will reinit
+everything, causing double latency and memory usage (so don't do it). Please
+don't depend on anything here, it's all hacky and not done ~:]~.
 
 most options won't be supported until [[https://github.com/qutebrowser/qutebrowser/pull/4525][this pull request]] is finalized.
 
