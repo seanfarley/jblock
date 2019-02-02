@@ -46,8 +46,9 @@ GENERIC_TOKENS = {
 	r"adv": [],
 	r"/adcss/*": ["adcss"],
 	r"/adplay.": ["adplay"],
-	# cdn currently in bad tokens, need to remove it
+	# cdn/js/ads currently in bad tokens, need to remove it
 	r"/cdn-cgi/pe/bag2?r*popads.net": ["cgi", "pe", "bag2"],
+	r"@@||fastly.net/js/*_ads.$script": ["fastly"],
 }
 
 

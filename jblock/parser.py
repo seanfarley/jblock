@@ -234,7 +234,8 @@ class JBlockRule():
 		https://github.com/gorhill/uBlock/blob/4f3aed6fe6347572c38ec9a293f933387b81e5de/src/js/static-net-filtering.js#L1949
 
 		"""
-		if not self.matching_supported():
+		s_opt_dict = dict(map(lambda v: (v, True), JBlockRule.OPTIONS))
+		if not self.matching_supported(s_opt_dict):
 			return []
 		if self.is_regex:
 			return token.TokenConverter.regex_to_tokens(self.regex)
