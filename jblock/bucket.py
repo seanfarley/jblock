@@ -160,7 +160,7 @@ class JBlockBuckets():
 				bucket_agg[t].append(rule)
 		for k, v in bucket_agg.items():
 			self.bucket_groups[k] = self._rule_list_to_bucket_group(k, v)
-		self.fallback_bucket_group = self._rule_list_to_bucket_group("", fallback_rules)  # type: JBlockBucketGroup
+		self.fallback_bucket_group = self._rule_list_to_bucket_group("FALLBACK", fallback_rules)
 		# import pprint
 		# pprint.pprint(bucket_agg)
 		# pprint.pprint(sorted(list(map(len, bucket_agg.values()))))
@@ -223,3 +223,17 @@ class JBlockBuckets():
 
 	def __len__(self):
 		return sum(map(len, self.bucket_groups.values())) + len(self.fallback_bucket_group)
+
+	def summary_str(self):
+		"""Get a summary string, helping diagnose bucketing problems."""
+		def _bucket_group_to_summary(group: JBlockBucketGroup):
+			return (
+				group.bucket_token + ": " +
+				str(len(group.blacklist)) +
+				", " + str(len(group.whitelist)))
+		summary = ["TOTAL: " + str(len(self))]
+		summary += [_bucket_group_to_summary(self.fallback_bucket_group)]
+		groups = sorted(self.bucket_groups.values(), key=len, reverse=True)[:10]
+		group_str = map(_bucket_group_to_summary, groups)
+		summary.extend(group_str)
+		return "\n".join(summary)
