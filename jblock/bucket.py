@@ -71,7 +71,7 @@ class JBlockBucket():
 		self.matchlist_re = _combined(map(operator.attrgetter('regex'),
 										  self.matchlist))
 		self.matchlist_with_options = non_domain_rules
-		self.matchlist_require_domain = domain_required_rules
+		self.matchlist_require_domain = domain_tools.domain_index(domain_required_rules)
 
 	def hit(self, url, options=None):
 		if len(self.rules) == 0:
@@ -104,6 +104,7 @@ class JBlockBucket():
 		if 'domain' in options and domain_required_rules:
 			src_domain = options['domain']
 			for d in domain_tools.domain_variants(src_domain):
+				# TODO this match always fails, str==JBlockRule
 				if d in domain_required_rules:
 					rules.extend(domain_required_rules[d])
 
@@ -159,7 +160,8 @@ class JBlockBuckets():
 			t = self._pick_token(rule)
 			if t is None:
 				fallback_rules.append(rule)
-			bucket_agg[t].append(rule)
+			else:
+				bucket_agg[t].append(rule)
 		for k, v in bucket_agg.items():
 			self.bucket_groups[k] = self._rule_list_to_bucket_group(k, v)
 		self.fallback_bucket_group = self._rule_list_to_bucket_group("", fallback_rules)  # type: JBlockBucketGroup

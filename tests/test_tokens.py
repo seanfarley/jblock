@@ -35,7 +35,6 @@ TOKENS = {
 
 # These patterns are not converted to regexps yet
 PATTERN_TOKENS = {
-	# TODO should img be in this token list?
 	r"\/watch\?key\=([\da-f]{32}($))": ["watch"],
 	r"https?:\/\/s3\.amazonaws\.com\/[0-9a-z]{57}\/((secure\.js|[0-9a-z]{10}))$": ["s3", "amazonaws", "com"],
 	r"wp-content\/plugins\/bsa-pro-scripteo": ["content", "plugins", "bsa", "pro"],
@@ -44,10 +43,10 @@ PATTERN_TOKENS = {
 }
 
 GENERIC_TOKENS = {
-	# TODO should img be in this token list?
 	r"adv": [],
 	r"/adcss/*": ["adcss"],
 	r"/adplay.": ["adplay"],
+	# cdn currently in bad tokens, need to remove it
 	r"/cdn-cgi/pe/bag2?r*popads.net": ["cgi", "pe", "bag2"],
 }
 
