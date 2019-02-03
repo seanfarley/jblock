@@ -23,7 +23,7 @@ import os
 from jblock import bucket
 
 try:
-	from qutebrowser.api import interceptor
+	from qutebrowser.api import interceptor, cmdutils, message
 except ImportError:
 	interceptor = None
 	interceptor.Request = None
@@ -45,3 +45,7 @@ if interceptor:
 			info.block()
 
 	interceptor.register(jblock_intercept)
+
+	@cmdutils.register()
+	def jblock_print_buckets():
+		message.info(jblock_buckets.summary_str())
