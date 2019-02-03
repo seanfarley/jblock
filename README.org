@@ -85,6 +85,8 @@ Unsupported rules are silently ignored.
 
 If you pass pep8, you fail the style tests.
 
+There are make targets for common operations.
+
 ** qutebrowser
 This snippet in config.py seems to work for now on the git version of
 qutebrowser, if you clone this repo in the config directory. It PULLS EASYLIST
