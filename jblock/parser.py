@@ -175,20 +175,20 @@ class JBlockRule():
 	def _rule_to_regex(self, rule):
 		"""
 		Convert AdBlock rule to a regular expression.
+
+		https://github.com/gorhill/uBlock/blob/4f3aed6fe6347572c38ec9a293f933387b81e5de/src/js/static-net-filtering.js#L139
 		"""
 		if not rule:
 			return rule
 
 		# Check if the rule isn't already regexp
 		if rule.startswith('/') and rule.endswith('/'):
-			if len(rule) > 1:
-				rule = rule[1:-1]
-			else:
-				raise JBlockParseError('Error parsing rule.')
-			return rule
+			if len(rule) > 1: return rule[1:-1]
+			else: raise JBlockParseError('Error parsing rule "{}"'.format(rule))
 
-		# escape special regex characters
-		rule = re.sub(r"([.$+?{}()\[\]\\])", r"\\\1", rule)
+		# TODO add '|' to this list once we no longer concat rules
+		# Replace special characters that interfere with regexp
+		rule = re.sub(r"([.+?${}()[\]\\])", r"\\\1", rule)
 
 		# XXX: the resulting regex must use non-capturing groups (?:
 		# for performance reasons; also, there is a limit on number
@@ -198,29 +198,26 @@ class JBlockRule():
 		# Separator character ^ matches anything but a letter, a digit, or
 		# one of the following: _ - . %. The end of the address is also
 		# accepted as separator.
-		rule = rule.replace("^", r"(?:[^\w\d_\-.%]|$)")
+		rule = rule.replace("^", r'(?:[^%.0-9a-z_-]|$)')
+
+		# TODO add this when we no longer concatenate all the rules together
+		# Remove * at front or back of rule
+		# rule = re.sub(r'^\*|\*$', '')
 
 		# * symbol
-		rule = rule.replace("*", ".*")
+		rule = rule.replace("*", '[^ ]*?')
 
 		## TODO Support anchoring in a more efficient way
 
-		# | in the end means the end of the address
+		if AnchorTypes.HOSTNAME in self.anchors:
+			# Prepend a scheme regex
+			prepend = r'^[a-z-]+://(?:[^/?#]+)?' if rule.startswith(r'\.') else r'^[a-z-]+://(?:[^/?#]+\.)?'
+			rule = prepend + rule
+		elif AnchorTypes.START in self.anchors:
+			rule = '^' + rule
+
 		if AnchorTypes.END in self.anchors:
 			rule = rule + '$'
-
-		# || in the beginning means beginning of the domain name
-		if AnchorTypes.HOSTNAME in self.anchors:
-			# XXX: it is better to use urlparse for such things,
-			# but urlparse doesn't give us a single regex.
-			# Regex is based on http://tools.ietf.org/html/rfc3986#appendix-B
-			#          |            | complete part     |
-			#          |  scheme    | of the domain     |
-			rule = r"^(?:[^:/?#]+:)?(?://(?:[^/?#]*\.)?)?" + rule
-
-		elif AnchorTypes.START in self.anchors:
-			# | in the beginning means start of the address
-			rule = '^' + rule
 
 		# other | symbols should be escaped
 		# we have "|$" in our regexp - do not touch it
@@ -291,7 +288,7 @@ class JBlockRule():
 		if self.is_comment:
 			return False
 
-		if self.is_html_rule:  # TODO support html rules
+		if self.is_html_rule:  # TODO should we support element hiding rules at all?
 			return False
 
 		options = options or {}
