@@ -38,6 +38,11 @@ class TestEasyList():
 			return f.readlines()
 
 	@pytest.fixture(scope="class")
+	def ubo_urls(self):
+		with open("tests/data/ubo-abp-urls", "r") as f:
+			return f.readlines()
+
+	@pytest.fixture(scope="class")
 	def easylist_buckets(self, easylist):
 		return bucket.JBlockBuckets(easylist)
 
@@ -61,3 +66,9 @@ class TestEasyList():
 		def _bench_block():
 			assert easylist_buckets.should_block(url) is False
 		benchmark(_bench_block)
+
+	def test_ubo_abp_benchmark(self, ubo_urls, easylist_buckets, benchmark):
+		def _bench():
+			for url in ubo_urls:
+				easylist_buckets.should_block(url)
+		benchmark(_bench)
