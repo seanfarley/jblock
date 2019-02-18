@@ -67,7 +67,7 @@ class TestEasyList():
 			assert easylist_buckets.should_block(url) is False
 		benchmark(_bench_block)
 
-	def test_ubo_abp_benchmark(self, ubo_urls, easylist_buckets, benchmark):
+	def test_ubo_abp_benchmark_no_options(self, ubo_urls, easylist_buckets, benchmark):
 		def _bench():
 			for url in ubo_urls:
 				easylist_buckets.should_block(url)
