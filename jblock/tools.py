@@ -14,11 +14,21 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-"""Helpers for domain based methods."""
+"""Common helper utilities used in many places."""
 
 import re
 import collections
 import itertools
+import enum
+
+class JBlockParseError(ValueError):
+    pass
+
+class AnchorTypes(enum.Enum):
+	"Ways that a rule can be anchored."
+	END = 1
+	START = 2
+	HOSTNAME = 3
 
 def domain_variants(domain):
 	"""

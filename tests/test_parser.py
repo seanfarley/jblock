@@ -3,6 +3,7 @@
 # https://github.com/scrapinghub/adblockparser/blob/master/tests/test_parsing.py
 
 # Copyright (c) 2014 ScrapingHub Inc.
+# Copyright (c) 2019 Jay Kamat <jaygkamat@gmail.com>
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +25,7 @@
 
 import pytest
 
-from jblock import parser, bucket
+from jblock import parser, bucket, tools
 
 # examples are from https://adblockplus.org/en/filter-cheatsheet
 # and https://adblockplus.org/en/filters
@@ -383,7 +384,7 @@ def test_empty_rules():
 
 
 def test_empty_regexp_rules():
-	with pytest.raises(parser.JBlockParseError):
+	with pytest.raises(tools.JBlockParseError):
 		bucket.JBlockBuckets(['adv', '/', '//'])
 
 

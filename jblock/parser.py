@@ -12,7 +12,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
 
 ## Some parts of this file were adapted from scrapinghub/adblockparser.
 # Their copyright is reproduced below.
@@ -46,16 +45,10 @@ import enum
 
 import attr
 
-from jblock import token, domain_tools
+from jblock.tools import AnchorTypes
+from jblock import token, tools
+import jblock.matcher
 
-
-class JBlockParseError(ValueError):
-    pass
-
-class AnchorTypes(enum.Enum):
-	END = 1
-	START = 2
-	HOSTNAME = 3
 
 @attr.attributes(slots=True)
 class JBlockRule():
@@ -101,7 +94,7 @@ class JBlockRule():
 	is_exception = attr.attr(init=False, type=bool)
 	raw_options = attr.attr(init=False, type=typing.List)
 	options = attr.attr(init=False, type=typing.Dict)
-	regex = attr.attr(init=False, type=str)
+	matcher = attr.attr(init=False, type=typing.Optional[jblock.matcher.Matcher])
 	_options_keys = attr.attr(init=False)
 	anchors = attr.attr(init=False, default=attr.Factory(set), type=typing.Set[AnchorTypes])
 	tokens = attr.attr(init=False, type=typing.MutableSequence[token.Token])
@@ -146,9 +139,9 @@ class JBlockRule():
 			# TODO: add support for HTML rules.
 			# We should split the rule into URL and HTML parts,
 			# convert URL part to a regex and parse the HTML part.
-			self.regex = ''
+			self.matcher = None
 		else:
-			self.regex = self._rule_to_regex(self.rule_text)
+			self.matcher = jblock.matcher.gen_matcher(self.rule_text, self.anchors)
 
 		self.tokens = self._to_tokens()
 
@@ -172,59 +165,6 @@ class JBlockRule():
 			return ("domain", cls._parse_domain_option(text))
 		return cls._parse_option_negation(text)
 
-	def _rule_to_regex(self, rule):
-		"""
-		Convert AdBlock rule to a regular expression.
-
-		https://github.com/gorhill/uBlock/blob/4f3aed6fe6347572c38ec9a293f933387b81e5de/src/js/static-net-filtering.js#L139
-		"""
-		if not rule:
-			return rule
-
-		# Check if the rule isn't already regexp
-		if rule.startswith('/') and rule.endswith('/'):
-			if len(rule) > 1: return rule[1:-1]
-			else: raise JBlockParseError('Error parsing rule "{}"'.format(rule))
-
-		# TODO add '|' to this list once we no longer concat rules
-		# Replace special characters that interfere with regexp
-		rule = re.sub(r"([.+?${}()[\]\\])", r"\\\1", rule)
-
-		# XXX: the resulting regex must use non-capturing groups (?:
-		# for performance reasons; also, there is a limit on number
-		# of capturing groups, no using them would prevent building
-		# a single regex out of several rules.
-
-		# Separator character ^ matches anything but a letter, a digit, or
-		# one of the following: _ - . %. The end of the address is also
-		# accepted as separator.
-		rule = rule.replace("^", r'(?:[^%.0-9a-z_-]|$)')
-
-		# TODO add this when we no longer concatenate all the rules together
-		# Remove * at front or back of rule
-		# rule = re.sub(r'^\*|\*$', '')
-
-		# * symbol
-		rule = rule.replace("*", '[^ ]*?')
-
-		## TODO Support anchoring in a more efficient way
-
-		if AnchorTypes.HOSTNAME in self.anchors:
-			# Prepend a scheme regex
-			prepend = r'^[a-z-]+://(?:[^/?#]+)?' if rule.startswith(r'\.') else r'^[a-z-]+://(?:[^/?#]+\.)?'
-			rule = prepend + rule
-		elif AnchorTypes.START in self.anchors:
-			rule = '^' + rule
-
-		if AnchorTypes.END in self.anchors:
-			rule = rule + '$'
-
-		# other | symbols should be escaped
-		# we have "|$" in our regexp - do not touch it
-		rule = re.sub(r"(\|)[^$]", r"\|", rule)
-
-		return rule
-
 	def _to_tokens(self) -> typing.MutableSequence[token.Token]:
 		"""Convert rule to tokens as well as possible.
 
@@ -235,7 +175,7 @@ class JBlockRule():
 		if not self.matching_supported(s_opt_dict):
 			return []
 		if self.is_regex:
-			return token.TokenConverter.regex_to_tokens(self.regex)
+			return token.TokenConverter.regex_to_tokens(self.raw_text[1:-1])
 		# TODO support '*' regex?
 
 		if AnchorTypes.HOSTNAME in self.anchors and '*' not in self.rule_text:
@@ -246,13 +186,11 @@ class JBlockRule():
 			AnchorTypes.END in self.anchors)
 
 	def _url_matches(self, url):
-		if self.regex_re is None:
-			self.regex_re = re.compile(self.regex)
-		return bool(self.regex_re.search(url))
+		return self.matcher.hit(url)
 
 	def _domain_matches(self, d):
 		domain_rules = self.options['domain']
-		for d in domain_tools.domain_variants(d):
+		for d in tools.domain_variants(d):
 			if d in domain_rules:
 				return domain_rules[d]
 		return not any(domain_rules.values())
