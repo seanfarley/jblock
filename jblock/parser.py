@@ -120,7 +120,7 @@ class JBlockRule():
 				self.rule_text = self.rule_text[2:]
 
 		if not self.is_comment and '$' in self.rule_text:
-			self.rule_text, options_text = self.rule_text.split('$', 1)
+			self.rule_text, options_text = self.rule_text.rsplit('$', 1)
 			self.raw_options = self._split_options(options_text)
 			self.options = dict(self._parse_option(opt) for opt in self.raw_options)
 		else:
