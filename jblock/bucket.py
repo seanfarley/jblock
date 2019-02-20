@@ -34,13 +34,11 @@ class JBlockBucket():
 
 	def __attrs_post_init__(self):
 		_params = dict((opt, True) for opt in self.supported_options)
-		self.rules = [
-			r for r in (
-				r if isinstance(r, parser.JBlockRule) else parser.JBlockRule(r)
-				for r in self.rules
-			)
-			if (not r.matcher.dummy_matcher() or r.options) and r.matching_supported(_params)
-		]
+		self.rules = list(filter(
+			lambda rule: (
+				(not rule.matcher.dummy_matcher() or rule.options) and
+				rule.matching_supported(_params)),
+			self.rules))
 
 	def hit(self, url, options=None):
 		"Return true if any of the rules in this bucket are matched by the url."
