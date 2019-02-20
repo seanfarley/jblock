@@ -29,6 +29,10 @@ class Matcher:
 		"""Whether this rule hits on this URL."""
 		raise NotImplementedError
 
+	def dummy_matcher(self) -> bool:
+		"""Return true if this matcher is a dummy matcher (ideally should be removed)."""
+		return False
+
 def gen_matcher(rule: str, anchors: typing.Set[AnchorTypes]) -> typing.Optional[Matcher]:
 	"""Generate and return an appropriate matcher for this rule"""
 	if not rule:
@@ -39,6 +43,9 @@ class AlwaysTrueMatcher(Matcher):
 	"""Matcher that always returns True"""
 
 	def hit(self, _url: str) -> bool:
+		return True
+
+	def dummy_matcher(self) -> bool:
 		return True
 
 class GenericMatcher(Matcher):

@@ -23,7 +23,7 @@ import pprint
 
 import attr
 
-from jblock import parser, token
+from jblock import parser, token, matcher
 
 @attr.attributes(slots=True)
 class JBlockBucket():
@@ -39,7 +39,7 @@ class JBlockBucket():
 				r if isinstance(r, parser.JBlockRule) else parser.JBlockRule(r)
 				for r in self.rules
 			)
-			if (r.matcher or r.options) and r.matching_supported(_params)
+			if (not r.matcher.dummy_matcher() or r.options) and r.matching_supported(_params)
 		]
 
 	def hit(self, url, options=None):
