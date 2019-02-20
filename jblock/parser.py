@@ -139,7 +139,7 @@ class JBlockRule():
 			# TODO: add support for HTML rules.
 			# We should split the rule into URL and HTML parts,
 			# convert URL part to a regex and parse the HTML part.
-			self.matcher = None
+			self.matcher = jblock.matcher.AlwaysTrueMatcher()
 		else:
 			self.matcher = jblock.matcher.gen_matcher(self.rule_text, self.anchors)
 

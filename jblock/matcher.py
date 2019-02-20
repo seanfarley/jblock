@@ -25,26 +25,32 @@ from jblock.tools import JBlockParseError, AnchorTypes
 class Matcher:
 	__slots__ = []  #  type: typing.List[str]
 
-	def hit(self, url: str) -> None:
+	def hit(self, url: str) -> bool:
 		"""Whether this rule hits on this URL."""
 		raise NotImplementedError
 
 def gen_matcher(rule: str, anchors: typing.Set[AnchorTypes]) -> typing.Optional[Matcher]:
 	"""Generate and return an appropriate matcher for this rule"""
 	if not rule:
-		return None
+		return AlwaysTrueMatcher()
 	return GenericMatcher(rule, anchors)
 
+class AlwaysTrueMatcher(Matcher):
+	"""Matcher that always returns True"""
 
-class GenericMatcher:
+	def hit(self, _url: str) -> bool:
+		return True
+
+class GenericMatcher(Matcher):
 	"""Matcher for generic rules (ie: not optimized at all)."""
 
 	__slots__ = ['rule']  #  type: typing.List[str]
 
 	def __init__(self, rule: str, anchors: typing.Set[AnchorTypes]) -> None:
 		self.rule = GenericMatcher._rule_to_regex(rule, anchors)  # type: typing.Optional[Pattern]
+		super().__init__()
 
-	def hit(self, url: str):
+	def hit(self, url: str) -> bool:
 		if self.rule is not None:
 			return bool(self.rule.search(url))
 		return True
@@ -64,9 +70,8 @@ class GenericMatcher:
 			if len(rule) > 1: return re.compile(rule[1:-1])
 			else: raise JBlockParseError('Error parsing rule "{}"'.format(rule))
 
-		# TODO add '|' to this list once we no longer concat rules
 		# Replace special characters that interfere with regexp
-		rule = re.sub(r"([.+?${}()[\]\\])", r"\\\1", rule)
+		rule = re.sub(r"([.+?${}()|[\]\\])", r"\\\1", rule)
 
 		# XXX: the resulting regex must use non-capturing groups (?:
 		# for performance reasons; also, there is a limit on number
@@ -80,7 +85,7 @@ class GenericMatcher:
 
 		# TODO add this when we no longer concatenate all the rules together
 		# Remove * at front or back of rule
-		# rule = re.sub(r'^\*|\*$', '')
+		rule = re.sub(r'^\*|\*$', '', rule)
 
 		# * symbol
 		rule = rule.replace("*", '[^ ]*?')
@@ -94,9 +99,5 @@ class GenericMatcher:
 
 		if AnchorTypes.END in anchors:
 			rule = rule + '$'
-
-		# other | symbols should be escaped
-		# we have "|$" in our regexp - do not touch it
-		rule = re.sub(r"(\|)[^$]", r"\|", rule)
 
 		return re.compile(rule)
