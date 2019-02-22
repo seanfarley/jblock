@@ -21,6 +21,7 @@ import re
 
 from jblock.tools import JBlockParseError, AnchorTypes
 
+RULE_IS_GENERIC = re.compile(r'[\^\*]')
 
 class Matcher:
 	__slots__ = []  #  type: typing.List[str]
