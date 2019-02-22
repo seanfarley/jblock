@@ -35,8 +35,17 @@ class Matcher:
 
 def gen_matcher(rule: str, anchors: typing.Set[AnchorTypes]) -> typing.Optional[Matcher]:
 	"""Generate and return an appropriate matcher for this rule"""
-	if not rule:
+	rule = rule.strip()
+	if not rule or rule == "*":
 		return AlwaysTrueMatcher()
+
+	# Check if rule is regexp
+	if rule.startswith('/') and rule.endswith('/'):
+		if len(rule) > 1: return RegexMatcher(rule[1:-1])
+		else: raise JBlockParseError('Error parsing rule "{}"'.format(rule))
+
+	# TODO handle plain hostname matching
+
 	return GenericMatcher(rule, anchors)
 
 class AlwaysTrueMatcher(Matcher):
@@ -72,11 +81,6 @@ class GenericMatcher(Matcher):
 		if not rule:
 			return None
 
-		# Check if the rule isn't already regexp
-		if rule.startswith('/') and rule.endswith('/'):
-			if len(rule) > 1: return re.compile(rule[1:-1])
-			else: raise JBlockParseError('Error parsing rule "{}"'.format(rule))
-
 		# Replace special characters that interfere with regexp
 		rule = re.sub(r"([.+?${}()|[\]\\])", r"\\\1", rule)
 
@@ -108,3 +112,16 @@ class GenericMatcher(Matcher):
 			rule = rule + '$'
 
 		return re.compile(rule)
+
+class RegexMatcher(Matcher):
+
+	__slots__ = ['rule']  #  type: typing.List[str]
+
+	def __init__(self, rule: str) -> None:
+		self.rule = re.compile(rule)  # type: Pattern
+		super().__init__()
+
+	def hit(self, url: str) -> bool:
+		if self.rule is not None:
+			return bool(self.rule.search(url))
+		return True
