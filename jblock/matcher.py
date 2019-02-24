@@ -149,10 +149,10 @@ class PlainHnEndAnchoredMatcher(Matcher):
 			return False
 		match_index = len(url) - len(self.rule)
 
-		scheme_index = url.find(self.SCHEME_STR)
+		scheme_index = url.find(SCHEME_STR)
 		if scheme_index == -1:
 			return False
-		scheme_index += len(self.SCHEME_STR)
+		scheme_index += len(SCHEME_STR)
 
 		if match_index <= scheme_index:
 			return True
