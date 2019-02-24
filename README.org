@@ -20,8 +20,7 @@ the adblockparesr api) to be more efficient.
 
 Currently (with easylist), it seems like the average performance is somewhere
 in-between adblock plus and ublock origin (about an overhead of ~0.2 ms per
-request). However, there are a couple pathalogical cases which can cause the
-latency to spike up to ~10ms.
+request).
 
 Seeing as I only spent a couple hours optimizing this so far (aside from the
 initial design), I think we can beat ubo if we have better balancing of filter
@@ -33,23 +32,27 @@ considering that a trivial inefficient python host blocker is an order of
 magnitude faster for almost the same results.
 
 Here's an example of the overhead added for token generation (the absolute
-minimum for every request), an optimal match, and a pathalogical case.
+minimum for every request), an optimal match, a pathalogical case, and a profile
+against the requests contained in the abp/ubo comparison test (with a total of
+6655 requests).
 
 #+begin_example
--------------------------------------------------------------------------------------------- benchmark: 3 tests --------------------------------------------------------------------------------------------
-Name (time in us)               Min                   Max                  Mean              StdDev                Median                 IQR            Outliers          OPS            Rounds  Iterations
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-test_token_str_bench        12.1200 (1.0)         30.1600 (1.0)         12.5919 (1.0)        0.7255 (1.0)         12.5000 (1.0)        0.1200 (1.0)     2468;4210  79,416.2722 (1.0)       55525           1
-test_block[0]               35.0700 (2.89)        71.5200 (2.37)        38.5589 (3.06)       3.8416 (5.30)        36.3800 (2.91)       5.1900 (43.25)     268;156  25,934.3502 (0.33)       8930           1
-test_pass[0]             1,693.7130 (139.75)   2,984.8430 (98.97)    1,786.6670 (141.89)   139.6831 (192.54)   1,723.5030 (137.88)   146.7500 (>1000.0)     42;13     559.7014 (0.01)        554           1
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------- benchmark: 5 tests ---------------------------------------------------------------------------------------------------------
+Name (time in us)                             Min                     Max                    Mean                 StdDev                  Median                    IQR            Outliers          OPS            Rounds  Iterations
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+test_token_str_bench                      11.6100 (1.0)           24.9300 (1.0)           12.4906 (1.0)           0.3029 (1.0)           12.4701 (1.0)           0.1399 (1.0)     1136;1157  80,060.4846 (1.0)       51256           1
+test_block[0]                             73.5801 (6.34)         142.4800 (5.72)          79.3759 (6.35)          3.2330 (10.67)         78.3800 (6.29)          2.5500 (18.22)     505;178  12,598.2823 (0.16)       5395           1
+test_pass[0]                           1,819.1111 (156.69)     3,736.6630 (149.89)     1,940.2723 (155.34)      208.6108 (688.68)     1,864.7411 (149.54)       22.1975 (158.63)      80;91     515.3916 (0.01)        509           1
+test_benchmark_no_options[True]      538,162.2791 (>1000.0)  576,830.0830 (>1000.0)  552,833.1898 (>1000.0)  15,516.3965 (>1000.0)  550,306.9260 (>1000.0)  22,326.0817 (>1000.0)       1;0       1.8089 (0.00)          5           1
+test_benchmark_no_options[False]     778,452.5021 (>1000.0)  812,069.8450 (>1000.0)  796,123.0654 (>1000.0)  16,323.4679 (>1000.0)  805,145.4390 (>1000.0)  29,383.8585 (>1000.0)       2;0       1.2561 (0.00)          5           1
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #+end_example
 
 Unfortunately, there's currently a regression from cpython when running with
 pypy, as it looks like pypy is slower than cpython when running ~re~.
 
 Performance of loading lists is abysmal currently, with loading easylist taking
-about 2 seconds.
+several seconds.
 
 This is almost certainly extremely inefficient on memory, as I'm storing a ton
 of debug information for no reason.
