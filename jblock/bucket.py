@@ -42,6 +42,7 @@ class JBlockBucket():
 
 	def hit(self, url, options=None):
 		"Return true if any of the rules in this bucket are matched by the url."
+		# TODO maintain a mapping for domain rules here.
 		return any(rule.match_url(url, options) for rule in self.rules)
 
 	def __len__(self):

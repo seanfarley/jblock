@@ -50,9 +50,6 @@ class TestEasyList():
 	def test_bulk_bucket_creation(self, easylist, benchmark) -> bucket.JBlockBuckets:
 		benchmark(functools.partial(bucket.JBlockBuckets, easylist))
 
-	def test_print_block(self, easylist_buckets):
-		print(easylist_buckets.summary_str())
-
 	@pytest.mark.parametrize('url_index', range(len(BLOCK_URLS)))
 	def test_block(self, url_index, easylist_buckets, benchmark):
 		url = TestEasyList.BLOCK_URLS[url_index]
@@ -81,3 +78,8 @@ class TestEasyList():
 		easylist_buckets.regen_buckets()
 
 		benchmark(_bench)
+
+
+	def test_print_block(self, easylist_buckets):
+		easylist_buckets.regen_buckets()
+		print(easylist_buckets.summary_str())

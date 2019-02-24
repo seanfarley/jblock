@@ -44,7 +44,7 @@ class TokenConverter():
 	# This needs to be automatically generated, this is not good.
 	BAD_TOKENS = frozenset(
 		['com', 'http', 'https', 'icon', 'images', 'img',
-		 'js', 'net', 'news', 'www', 'ad', 'ads', 'adv', 'banner', 'cdn'])
+		 'js', 'net', 'news', 'www'])
 
 	HOSTNAME_TOKEN = re.compile(r'[0-9a-z]{2,}')
 
