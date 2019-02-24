@@ -66,12 +66,18 @@ ie: an accept and a fail bucket, all with one tag.
 class JBlockBuckets():
 	"""Handle logic for maintaining and updating filter buckets."""
 
-	def __init__(self, rules: typing.List[str], supported_options=parser.JBlockRule.OPTIONS):
-		# TODO use more than one bucket
+	def __init__(self,
+				 rules: typing.List[str],
+				 supported_options=parser.JBlockRule.OPTIONS,
+				 token_frequency: typing.Dict[token.Token, int] = {}):
 		self.rules = rules
 		self.unsupported_rules = []  # type: typing.List[token.Token]
 		self.supported_options = supported_options
 		self.bucket_groups = {}  # type: typing.Dict[token.Token, JBlockBucketGroup]
+		if token_frequency:
+			self.token_frequency = token_frequency
+		else:
+			self.token_frequency = collections.defaultdict(int)  # type: typing.Dict[token.Token, int]
 		self._gen_buckets()
 
 	def _gen_buckets(self):
@@ -119,10 +125,22 @@ class JBlockBuckets():
 
 
 	def _pick_token(self, rule):
-		if rule.tokens:
-			return rule.tokens[0]
-		return None
+		if self.token_frequency:
+			return min(
+				rule.tokens, default=None,
+				key=lambda k: self.token_frequency.get(k, 0))
+		else:
+			if rule.tokens:
+				return rule.tokens[0]
+			return None
 
+	def get_token_frequency(self):
+		"""Get a token frequency object, so we can speed up accesses next time we create an adblocker."""
+		return self.token_frequency
+
+	def regen_buckets(self):
+		"""Regenerate buckets to take advantage of (new) token profiling."""
+		self._gen_buckets()
 
 	def should_block(self, url: str, options=None) -> bool:
 		"""Decide if we should block a URL with OPTIONS.
@@ -132,6 +150,10 @@ class JBlockBuckets():
 		1. Check all blacklist filters
 		2. Check all whitelist filters (if that hit)"""
 		tokens, block = token.TokenConverter.url_to_tokens(url), False
+
+		# Update token frequency map (so we can get faster later)
+		for t in tokens: self.token_frequency[t] += 1
+
 		for t in tokens:
 			group = self.bucket_groups.get(t, None)
 			if group and group.blacklist.hit(url, options):

@@ -67,8 +67,17 @@ class TestEasyList():
 			assert easylist_buckets.should_block(url) is False
 		benchmark(_bench_block)
 
-	def test_ubo_abp_benchmark_no_options(self, ubo_urls, easylist_buckets, benchmark):
+	@pytest.mark.parametrize('token_freq', [False, True])
+	def test_benchmark_no_options(self, ubo_urls, token_freq, easylist_buckets, benchmark):
 		def _bench():
 			for url in ubo_urls:
 				easylist_buckets.should_block(url)
+		if token_freq:
+			_bench()
+		else:
+			benchmark(_bench)
+			return
+
+		easylist_buckets.regen_buckets()
+
 		benchmark(_bench)
