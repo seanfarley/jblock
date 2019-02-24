@@ -22,6 +22,9 @@ import re
 from jblock.tools import JBlockParseError, AnchorTypes
 
 RULE_IS_GENERIC = re.compile(r'[\^\*]')
+SCHEME_STR = "://"
+POST_HOSTNAME_CHARS = re.compile(r'[\/?#]')
+
 
 class Matcher:
 	__slots__ = []  #  type: typing.List[str]
@@ -46,6 +49,12 @@ def gen_matcher(rule: str, anchors: typing.Set[AnchorTypes]) -> typing.Optional[
 		else: raise JBlockParseError('Error parsing rule "{}"'.format(rule))
 
 	# TODO handle plain hostname matching
+
+	if AnchorTypes.HOSTNAME in anchors and AnchorTypes.END in anchors:
+		if RULE_IS_GENERIC.search(rule):
+			return GenericMatcher(rule, anchors)
+		# No special characters, we can get away with plain matching
+		# return PlainHnEndAnchoredMatcher(rule)
 
 	return GenericMatcher(rule, anchors)
 
@@ -125,4 +134,58 @@ class RegexMatcher(Matcher):
 	def hit(self, url: str) -> bool:
 		if self.rule is not None:
 			return bool(self.rule.search(url))
+		return True
+
+class PlainHnEndAnchoredMatcher(Matcher):
+
+	__slots__ = ['rule']  #  type: typing.List[str]
+
+	def __init__(self, rule: str) -> None:
+		self.rule = rule
+		super().__init__()
+
+	def hit(self, url: str) -> bool:
+		if not url.endswith(self.rule):
+			return False
+		match_index = len(url) - len(self.rule)
+
+		scheme_index = url.find(self.SCHEME_STR)
+		if scheme_index == -1:
+			return False
+		scheme_index += len(self.SCHEME_STR)
+
+		if match_index <= scheme_index:
+			return True
+
+		if (url[match_index - 1] != '.' or
+			POST_HOSTNAME_CHARS.search(url[scheme_index:match_index])):
+			return False
+
+		return True
+
+class PlainHnAnchoredMatcher(Matcher):
+
+	__slots__ = ['rule']  #  type: typing.List[str]
+
+	def __init__(self, rule: str) -> None:
+		self.rule = rule
+		super().__init__()
+
+	def hit(self, url: str) -> bool:
+		scheme_index = url.find(SCHEME_STR)
+		if scheme_index == -1:
+			return False
+
+		scheme_index += len(SCHEME_STR)
+		match_index = url.find(self.rule, scheme_index)
+		if match_index < 1:
+			return False
+
+		if match_index <= scheme_index:
+			return True
+
+		if (url[match_index - 1] != '.' or
+			POST_HOSTNAME_CHARS.search(url[scheme_index:match_index])):
+			return False
+
 		return True
