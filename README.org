@@ -14,7 +14,7 @@ very well documented either.
 [[https://www.youtube.com/watch?v=Bd29bqfuCSc&feature=youtu.be][Here's a demo, but expect it to be outdated very quickly]].
 
 Don't build anything on this yet, I expect to redo the API (which still mirrors
-the adblockparesr api) to be more efficient.
+the adblockparser api) to be more efficient.
 
 * Performance
 
