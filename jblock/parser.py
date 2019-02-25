@@ -50,7 +50,7 @@ from jblock import token, tools
 import jblock.matcher
 
 
-@attr.attributes(slots=True)
+@attr.attributes(slots=True, cmp=False)
 class JBlockRule():
 	"""An individual rule which a URL can be matched against."""
 	OPTIONS = frozenset({
@@ -82,7 +82,6 @@ class JBlockRule():
 	raw_text = attr.attr(type=str)
 	rule_text = attr.attr(init=False, type=str)
 	is_regex = attr.attr(init=False, type=bool)
-	regex_re = attr.attr(init=False, type=typing.Optional[typing.Pattern], default=None)
 
 	is_comment = attr.attr(init=False, type=bool)
 
@@ -195,12 +194,11 @@ class JBlockRule():
 				return domain_rules[d]
 		return not any(domain_rules.values())
 
-	def match_url(self, url, options=None):
+	def match_url(self, url, options=None, *, ignore_domain=False):
 		"""
 		Return if this rule matches the URL.
 
-		What to do if rule is matched is up to developer. Most likely
-		``.is_exception`` attribute should be taken in account.
+		ignore_domain: if we shoudn't do any domain checking (assuming it happened before already)
 		"""
 		options = options or {}
 		for optname in self.options:
@@ -212,6 +210,8 @@ class JBlockRule():
 				# raise ValueError("Rule requires option %s" % optname)
 
 			if optname == 'domain':
+				if ignore_domain:
+					continue
 				if not self._domain_matches(options['domain']):
 					return False
 				continue

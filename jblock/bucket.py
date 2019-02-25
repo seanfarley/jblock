@@ -23,30 +23,71 @@ import pprint
 
 import attr
 
-from jblock import parser, token, matcher
+from jblock import parser, token, matcher, tools
 
-@attr.attributes(slots=True)
 class JBlockBucket():
 	"""Class representing a single bucket."""
 
-	rules = attr.attr(type=typing.MutableSequence[parser.JBlockRule])
-	supported_options = attr.attr(default=parser.JBlockRule.OPTIONS)
+	__slots__ = ['supported_options', 'rules',
+				 'domain_hitlist', 'domain_exceptionlist', 'length']  # type: typing.List[str]
 
-	def __attrs_post_init__(self):
+	def __init__(self, rules: typing.MutableSequence[parser.JBlockRule],
+				 supported_options: typing.AbstractSet[str] = parser.JBlockRule.OPTIONS):
+		self.supported_options = supported_options
+		self.domain_hitlist = collections.defaultdict(set)  # type: typing.Dict[str, typing.Set[parser.JBlockRule]]
+		self.domain_exceptionlist = collections.defaultdict(set)  # type: typing.Dict[str, typing.Set[parser.JBlockRule]]
+		# Rules that always apply to this bucket
+		self.rules = set()  # type: typing.Set[parser.JBlockRule]
+		self.length = 0
+
 		_params = dict((opt, True) for opt in self.supported_options)
-		self.rules = list(filter(
-			lambda rule: (
-				(not rule.matcher.dummy_matcher() or rule.options) and
-				rule.matching_supported(_params)),
-			self.rules))
+		for r in rules:
+			if (r.matcher is None or
+				(r.matcher.dummy_matcher() and not r.options) or
+				not r.matching_supported(_params)):
+				continue
 
-	def hit(self, url, options=None):
+			self.length += 1
+
+			if r.options.get('domain'):
+				all_exceptions = True
+				for domain, allow in r.options['domain'].items():
+					if allow:
+						all_exceptions = False
+						self.domain_hitlist[domain].add(r)
+					else:
+						self.domain_exceptionlist[domain].add(r)
+				if all_exceptions:
+					# If we are nothing but exceptions, we need to add ourselves to the generic rules as well (and
+					# possibly get negated in the exceptionlist)
+					self.rules.add(r)
+			else:
+				self.rules.add(r)
+
+	def hit(self, url, domain_variants, options=None):
 		"Return true if any of the rules in this bucket are matched by the url."
-		# TODO maintain a mapping for domain rules here.
-		return any(rule.match_url(url, options) for rule in self.rules)
+		rules_to_check = set(self.rules)
+		rules_in_flight = set()
+		exceptions_in_flight = set()
+		# Add all exception rules, then add any hit rules, then remove all exception rules that hit.
+		# We also have to have more specific rules override less specific rules.
+
+		# TODO try to avoid set copies here
+		for variant in domain_variants:
+			# If a rule already made it in, don't blacklist it
+			exceptions_in_flight.update(self.domain_exceptionlist.get(variant, set()) - rules_in_flight)
+			# if a rule already made it in, don't whitelist it
+			rules_in_flight.update(self.domain_hitlist.get(variant, set()) - exceptions_in_flight)
+
+		rules_to_check.difference_update(exceptions_in_flight)
+		rules_to_check.update(rules_in_flight)
+		# for variant in domain_variants:
+		# 	rules_to_check.difference_update(self.domain_exceptionlist.get(variant, []))
+
+		return any(rule.match_url(url, options, ignore_domain=True) for rule in rules_to_check)
 
 	def __len__(self):
-		return len(self.rules)
+		return self.length
 
 
 @attr.attributes(slots=True)
@@ -151,29 +192,33 @@ class JBlockBuckets():
 		1. Check all blacklist filters
 		2. Check all whitelist filters (if that hit)"""
 		tokens, block = token.TokenConverter.url_to_tokens(url), False
+		if options is not None and 'domain' in options:
+			domain_variants = list(tools.domain_variants(options['domain']))
+		else:
+			domain_variants = []
 
 		# Update token frequency map (so we can get faster later)
 		for t in tokens: self.token_frequency[t] += 1
 
 		for t in tokens:
 			group = self.bucket_groups.get(t, None)
-			if group and group.blacklist.hit(url, options):
+			if group and group.blacklist.hit(url, domain_variants, options):
 				block = True
 				break
 
 		if not block:
-			block = self.fallback_bucket_group.blacklist.hit(url, options)
+			block = self.fallback_bucket_group.blacklist.hit(url, domain_variants, options)
 
 		if not block:
 			return False
 
 		for t in tokens:
 			group = self.bucket_groups.get(t, None)
-			if group and group.whitelist.hit(url, options):
+			if group and group.whitelist.hit(url, domain_variants, options):
 				block = False
 				break
 		if block:
-			block = not self.fallback_bucket_group.whitelist.hit(url, options)
+			block = not self.fallback_bucket_group.whitelist.hit(url, domain_variants, options)
 
 		return block
 
