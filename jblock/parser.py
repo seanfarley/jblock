@@ -43,14 +43,11 @@ import functools
 import collections
 import enum
 
-import attr
-
 from jblock.tools import AnchorTypes
 from jblock import token, tools
 import jblock.matcher
 
 
-@attr.attributes(slots=True, cmp=False)
 class JBlockRule():
 	"""An individual rule which a URL can be matched against."""
 	OPTIONS = frozenset({
@@ -79,27 +76,16 @@ class JBlockRule():
 
 	OPTIONS_SPLIT_RE = re.compile(',(?=~?(?:%s))' % ('|'.join(OPTIONS)))
 
-	raw_text = attr.attr(type=str)
-	rule_text = attr.attr(init=False, type=str)
-	is_regex = attr.attr(init=False, type=bool)
+	__slots__ = [
+		'rule_text', 'is_regex', 'is_comment', 'is_html_rule',
+		'is_exception', 'raw_options', 'options', 'matcher',
+		'anchors', 'tokens']  # type: typing.List[str]
 
-	is_comment = attr.attr(init=False, type=bool)
-
-	@is_comment.default
-	def c_init(self):
-		return not self.raw_text or self.raw_text.startswith(('!', '[Adblock'))
-
-	is_html_rule = attr.attr(init=False, type=bool)
-	is_exception = attr.attr(init=False, type=bool)
-	raw_options = attr.attr(init=False, type=typing.List)
-	options = attr.attr(init=False, type=typing.Dict)
-	matcher = attr.attr(init=False, type=typing.Optional[jblock.matcher.Matcher])
-	anchors = attr.attr(init=False, default=attr.Factory(set), type=typing.Set[AnchorTypes])
-	tokens = attr.attr(init=False, type=typing.MutableSequence[token.Token])
-
-	def __attrs_post_init__(self) -> None:
-		self.rule_text = self.raw_text.strip()
+	def __init__(self, raw_text: str) -> None:
+		self.rule_text = raw_text.strip()
+		self.is_comment = not raw_text or raw_text.startswith(('!', '[Adblock'))
 		self.is_regex = self.rule_text.startswith('/') and self.rule_text.endswith('/')
+		self.anchors = set()   # type: typing.Set[AnchorTypes]
 
 		if self.is_comment:
 			self.is_html_rule = self.is_exception = False
@@ -136,7 +122,7 @@ class JBlockRule():
 			# TODO: add support for HTML rules.
 			# We should split the rule into URL and HTML parts,
 			# convert URL part to a regex and parse the HTML part.
-			self.matcher = jblock.matcher.AlwaysTrueMatcher()
+			self.matcher = jblock.matcher.AlwaysTrueMatcher()  # type: jblock.matcher.Matcher
 		else:
 			self.matcher = jblock.matcher.gen_matcher(self.rule_text, self.anchors)
 
@@ -175,7 +161,7 @@ class JBlockRule():
 		if not self.matching_supported(s_opt_dict):
 			return []
 		if self.is_regex:
-			return token.TokenConverter.regex_to_tokens(self.raw_text[1:-1])
+			return token.TokenConverter.regex_to_tokens(self.rule_text[1:-1])
 		# TODO support '*' regex?
 
 		if AnchorTypes.HOSTNAME in self.anchors and '*' not in self.rule_text:

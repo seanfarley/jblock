@@ -90,16 +90,21 @@ class JBlockBucket():
 		return self.length
 
 
-@attr.attributes(slots=True)
 class JBlockBucketGroup():
 	"""Class representing a group of buckets.
 
 ie: an accept and a fail bucket, all with one tag.
 
 	"""
-	bucket_token = attr.attr(type=token.Token)
-	blacklist = attr.attr(default=attr.Factory(JBlockBucket))
-	whitelist = attr.attr(default=attr.Factory(JBlockBucket))
+	__slots__ = [
+		'bucket_token', 'blacklist', 'whitelist']  # type: typing.List[str]
+
+	def __init__(self, bucket_token: token.Token,
+				 blacklist: JBlockBucket,
+				 whitelist: JBlockBucket):
+		self.bucket_token = bucket_token
+		self.blacklist = blacklist
+		self.whitelist = whitelist
 
 	def __len__(self):
 		return len(self.blacklist) + len(self.whitelist)

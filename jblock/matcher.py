@@ -40,7 +40,7 @@ class Matcher:
 		"""Return true if this matcher is a dummy matcher (ideally should be removed)."""
 		return False
 
-def gen_matcher(rule: str, anchors: typing.Set[AnchorTypes]) -> typing.Optional[Matcher]:
+def gen_matcher(rule: str, anchors: typing.Set[AnchorTypes]) -> Matcher:
 	"""Generate and return an appropriate matcher for this rule"""
 	rule = rule.strip()
 	if not rule or rule == "*":
