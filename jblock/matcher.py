@@ -30,7 +30,9 @@ class Matcher:
 	__slots__ = []  #  type: typing.List[str]
 
 	def hit(self, url: str) -> bool:
-		"""Whether this rule hits on this URL."""
+		"""Whether this rule hits on this URL.
+
+		This function needs to be implemented as fast as possible."""
 		raise NotImplementedError
 
 	def dummy_matcher(self) -> bool:
@@ -73,23 +75,25 @@ class GenericMatcher(Matcher):
 	__slots__ = ['rule']  #  type: typing.List[str]
 
 	def __init__(self, rule: str, anchors: typing.Set[AnchorTypes]) -> None:
-		self.rule = GenericMatcher._rule_to_regex(rule, anchors)  # type: typing.Optional[Pattern]
+		self.rule = GenericMatcher._rule_to_regex(rule, anchors)  # type: typing.Union[Pattern, str]
 		super().__init__()
 
 	def hit(self, url: str) -> bool:
-		if self.rule is not None:
-			return bool(self.rule.search(url))
-		return True
+		try:
+			return bool(self.rule.search(url))  # type: ignore
+		except AttributeError:
+			if isinstance(self.rule, str):
+				self.rule = re.compile(self.rule)
+				return bool(self.rule.search(url))
+			raise JBlockParseError('Internal error with rule: "{}"'.format(self.rule))
 
 	@staticmethod
-	def _rule_to_regex(rule: typing.Optional[str], anchors: typing.Set[AnchorTypes]) -> typing.Optional[Pattern]:
+	def _rule_to_regex(rule: str, anchors: typing.Set[AnchorTypes]) -> str:
 		"""
 		Convert AdBlock rule to a regular expression.
 
 		https://github.com/gorhill/uBlock/blob/4f3aed6fe6347572c38ec9a293f933387b81e5de/src/js/static-net-filtering.js#L139
 		"""
-		if not rule:
-			return None
 
 		# Replace special characters that interfere with regexp
 		rule = re.sub(r"([.+?${}()|[\]\\])", r"\\\1", rule)
@@ -121,7 +125,7 @@ class GenericMatcher(Matcher):
 		if AnchorTypes.END in anchors:
 			rule = rule + '$'
 
-		return re.compile(rule)
+		return rule
 
 class RegexMatcher(Matcher):
 
@@ -132,9 +136,7 @@ class RegexMatcher(Matcher):
 		super().__init__()
 
 	def hit(self, url: str) -> bool:
-		if self.rule is not None:
-			return bool(self.rule.search(url))
-		return True
+		return bool(self.rule.search(url))
 
 class PlainHnEndAnchoredMatcher(Matcher):
 
