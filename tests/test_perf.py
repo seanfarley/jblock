@@ -46,7 +46,6 @@ class TestEasyList():
 	def easylist_buckets(self, easylist):
 		return bucket.JBlockBuckets(easylist)
 
-	@pytest.mark.skip()
 	def test_bulk_bucket_creation(self, easylist, benchmark) -> bucket.JBlockBuckets:
 		benchmark(functools.partial(bucket.JBlockBuckets, easylist))
 

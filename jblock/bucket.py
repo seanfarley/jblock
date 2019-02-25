@@ -49,7 +49,7 @@ class JBlockBucket():
 
 			self.length += 1
 
-			if r.options.get('domain'):
+			if 'domain' in r.options:
 				all_exceptions = True
 				for domain, allow in r.options['domain'].items():
 					if allow:

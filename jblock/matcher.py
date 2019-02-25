@@ -24,6 +24,7 @@ from jblock.tools import JBlockParseError, AnchorTypes
 RULE_IS_GENERIC = re.compile(r'[\^\*]')
 SCHEME_STR = "://"
 POST_HOSTNAME_CHARS = re.compile(r'[\/?#]')
+HOSTNAME_END_ANCHORS = frozenset([AnchorTypes.END, AnchorTypes.HOSTNAME])
 
 
 class Matcher:
@@ -52,7 +53,7 @@ def gen_matcher(rule: str, anchors: typing.Set[AnchorTypes]) -> typing.Optional[
 
 	# TODO handle plain hostname matching
 
-	if AnchorTypes.HOSTNAME in anchors and AnchorTypes.END in anchors:
+	if anchors >= HOSTNAME_END_ANCHORS:
 		if RULE_IS_GENERIC.search(rule):
 			return GenericMatcher(rule, anchors)
 		# No special characters, we can get away with plain matching
@@ -71,6 +72,9 @@ class AlwaysTrueMatcher(Matcher):
 
 class GenericMatcher(Matcher):
 	"""Matcher for generic rules (ie: not optimized at all)."""
+
+	SPECIAL_CHARACTER_RE = re.compile(r"([.+?${}()|[\]\\])")
+	FRONT_BACK_STAR = re.compile(r'^\*|\*$')
 
 	__slots__ = ['rule']  #  type: typing.List[str]
 
@@ -96,7 +100,7 @@ class GenericMatcher(Matcher):
 		"""
 
 		# Replace special characters that interfere with regexp
-		rule = re.sub(r"([.+?${}()|[\]\\])", r"\\\1", rule)
+		rule = GenericMatcher.SPECIAL_CHARACTER_RE.sub(r"\\\1", rule)
 
 		# XXX: the resulting regex must use non-capturing groups (?:
 		# for performance reasons; also, there is a limit on number
@@ -110,7 +114,7 @@ class GenericMatcher(Matcher):
 
 		# TODO add this when we no longer concatenate all the rules together
 		# Remove * at front or back of rule
-		rule = re.sub(r'^\*|\*$', '', rule)
+		rule = GenericMatcher.FRONT_BACK_STAR.sub('', rule)
 
 		# * symbol
 		rule = rule.replace("*", '[^ ]*?')

@@ -94,7 +94,6 @@ class JBlockRule():
 	raw_options = attr.attr(init=False, type=typing.List)
 	options = attr.attr(init=False, type=typing.Dict)
 	matcher = attr.attr(init=False, type=typing.Optional[jblock.matcher.Matcher])
-	_options_keys = attr.attr(init=False)
 	anchors = attr.attr(init=False, default=attr.Factory(set), type=typing.Set[AnchorTypes])
 	tokens = attr.attr(init=False, type=typing.MutableSequence[token.Token])
 
@@ -118,7 +117,6 @@ class JBlockRule():
 		else:
 			self.raw_options = []
 			self.options = {}
-		self._options_keys = frozenset(self.options.keys()) - set(['match-case'])
 
 		# Set up anchoring
 		if self.rule_text:
@@ -163,6 +161,9 @@ class JBlockRule():
 		if text.startswith("domain="):
 			return ("domain", cls._parse_domain_option(text))
 		return cls._parse_option_negation(text)
+
+	def _options_keys(self):
+		return frozenset(self.options.keys()) - set(['match-case'])
 
 	def _to_tokens(self) -> typing.MutableSequence[token.Token]:
 		"""Convert rule to tokens as well as possible.
@@ -231,7 +232,7 @@ class JBlockRule():
 
 		options = options or {}
 		keys = set(options.keys())
-		if not keys.issuperset(self._options_keys):
+		if not keys.issuperset(self._options_keys()):
 			# some of the required options are not given
 			return False
 
