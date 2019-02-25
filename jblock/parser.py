@@ -74,6 +74,7 @@ class JBlockRule():
 		# domain is a special case!
 		"domain",})
 
+	S_OPT_DICT = dict(map(lambda v: (v, True), OPTIONS))
 	OPTIONS_SPLIT_RE = re.compile(',(?=~?(?:%s))' % ('|'.join(OPTIONS)))
 
 	__slots__ = [
@@ -157,8 +158,7 @@ class JBlockRule():
 		https://github.com/gorhill/uBlock/blob/4f3aed6fe6347572c38ec9a293f933387b81e5de/src/js/static-net-filtering.js#L1949
 
 		"""
-		s_opt_dict = dict(map(lambda v: (v, True), JBlockRule.OPTIONS))
-		if not self.matching_supported(s_opt_dict):
+		if not self.matching_supported(JBlockRule.S_OPT_DICT):
 			return []
 		if self.is_regex:
 			return token.TokenConverter.regex_to_tokens(self.rule_text[1:-1])
