@@ -57,6 +57,30 @@ several seconds.
 This is almost certainly extremely inefficient on memory, as I'm storing a ton
 of debug information for no reason.
 
+** Tricks
+
+We're using a couple tricks which aren't widely used. Hopefully other projects
+can become faster using some of these tricks.
+
+*** Picking Optimal Tokens
+
+Since we pay a large cost for every token matched, we should strive as
+hard as possible to pick tokens which are infrequently matched. We can do this
+by counting tokens while processing them, and later on rebuilding rules to
+prefer infrequently seen rules. This is dependent on the user's browsing
+history, so in order to have the best possible performance, this index will need
+to be updated somewhat frequently.
+
+*** Filtering Options in Batch
+
+Most other blockers loop through rules one by one to determine which one hits.
+Unfortunately, there are many rules under the 'http' and 'https' token which are
+domain rules, which thankfully don't need to be executed very often. uBO
+optimizes this by using a trie to match domains, but I'm using a dictionary of
+whitelist/blacklist domains. On most requests, this leads to a couple failed
+hashtable lookups (which are very cheap), but when we do hit, it can be painful.
+
+
 * Correctness
 
 Honestly, I have no clue. There's not much in large datasets to compare against,
