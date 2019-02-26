@@ -18,6 +18,8 @@
 import typing
 from typing import Pattern
 import re
+import operator
+import functools
 
 from jblock.tools import JBlockParseError, AnchorTypes
 
@@ -40,7 +42,7 @@ class Matcher:
 		"""Return true if this matcher is a dummy matcher (ideally should be removed)."""
 		return False
 
-def gen_matcher(rule: str, anchors: typing.Set[AnchorTypes]) -> Matcher:
+def gen_matcher(rule: str, anchors: typing.Container[AnchorTypes]) -> Matcher:
 	"""Generate and return an appropriate matcher for this rule"""
 	rule = rule.strip()
 	if not rule or rule == "*":
@@ -53,7 +55,7 @@ def gen_matcher(rule: str, anchors: typing.Set[AnchorTypes]) -> Matcher:
 
 	# TODO handle plain hostname matching
 
-	if anchors >= HOSTNAME_END_ANCHORS:
+	if all(map(functools.partial(operator.contains, anchors), HOSTNAME_END_ANCHORS)):
 		if RULE_IS_GENERIC.search(rule):
 			return GenericMatcher(rule, anchors)
 		# No special characters, we can get away with plain matching
@@ -78,7 +80,7 @@ class GenericMatcher(Matcher):
 
 	__slots__ = ['rule']  #  type: typing.List[str]
 
-	def __init__(self, rule: str, anchors: typing.Set[AnchorTypes]) -> None:
+	def __init__(self, rule: str, anchors: typing.Container[AnchorTypes]) -> None:
 		self.rule = GenericMatcher._rule_to_regex(rule, anchors)  # type: typing.Union[Pattern, str]
 		super().__init__()
 
@@ -92,7 +94,7 @@ class GenericMatcher(Matcher):
 			raise JBlockParseError('Internal error with rule: "{}"'.format(self.rule))
 
 	@staticmethod
-	def _rule_to_regex(rule: str, anchors: typing.Set[AnchorTypes]) -> str:
+	def _rule_to_regex(rule: str, anchors: typing.Container[AnchorTypes]) -> str:
 		"""
 		Convert AdBlock rule to a regular expression.
 

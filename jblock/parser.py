@@ -86,7 +86,6 @@ class JBlockRule():
 	def __init__(self, raw_text: str) -> None:
 		self.rule_text = raw_text.strip()
 		self.is_comment = not raw_text or raw_text.startswith(('!', '[Adblock'))
-		self.anchors = set()   # type: typing.Set[AnchorTypes]
 
 		if self.is_comment:
 			self.is_html_rule = self.is_exception = False
@@ -108,18 +107,22 @@ class JBlockRule():
 			self.options = {}
 
 		# Set up anchoring
+		self.anchors = []
 		if self.rule_text:
 			if self.rule_text[-1] == '|':
-				self.anchors.add(AnchorTypes.END)
+				self.anchors.append(AnchorTypes.END)
 				self.rule_text = self.rule_text[:-1]
 			# || in the beginning means beginning of the domain name
 			if self.rule_text[:2] == '||':
-				self.anchors.add(AnchorTypes.HOSTNAME)
+				self.anchors.append(AnchorTypes.HOSTNAME)
 				self.rule_text = self.rule_text[2:]
 			elif self.rule_text[0] == '|':
 				# | in the beginning means start of the address
-				self.anchors.add(AnchorTypes.START)
+				self.anchors.append(AnchorTypes.START)
 				self.rule_text = self.rule_text[1:]
+
+		# Convert anchors into a tuple to save memory - a list will have some empty capacity, while a tuple won't
+		self.anchors = tuple(self.anchors)   # type: typing.Tuple[AnchorTypes]
 
 		if self.is_comment or self.is_html_rule:
 			# TODO: add support for HTML rules.
