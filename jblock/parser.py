@@ -80,7 +80,7 @@ class JBlockRule():
 
 	__slots__ = [
 		'rule_text', 'is_regex', 'is_comment', 'is_html_rule',
-		'is_exception', 'raw_options', 'options', 'matcher',
+		'is_exception', 'options', 'matcher',
 		'anchors', 'tokens']  # type: typing.List[str]
 
 	def __init__(self, raw_text: str) -> None:
@@ -100,14 +100,12 @@ class JBlockRule():
 
 		if not self.is_comment and '$' in self.rule_text:
 			self.rule_text, options_text = self.rule_text.rsplit('$', 1)
-			self.raw_options = self._split_options(options_text)
 			self.options = dict(
-				self._parse_option(opt) for opt in self.raw_options
+				self._parse_option(opt) for opt in self._split_options(options_text)
 				# Drop some options if we can't handle them
 				if opt not in JBlockRule.DROPPED_OPTIONS)
 
 		else:
-			self.raw_options = []
 			self.options = {}
 
 		# Set up anchoring
