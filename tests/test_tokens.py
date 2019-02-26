@@ -66,7 +66,7 @@ def test_pattern_token_basic(pattern, tokens):
 
 @pytest.mark.parametrize(('pattern', 'tokens'), GENERIC_TOKENS.items())
 def test_pattern_token_basic(pattern, tokens):
-	t = parser.JBlockRule(pattern).tokens
+	t = parser.JBlockRule(pattern).to_tokens()
 	assert t == tokens
 
 ## Benchmarks

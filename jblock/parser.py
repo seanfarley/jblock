@@ -81,7 +81,7 @@ class JBlockRule():
 	__slots__ = [
 		'rule_text', 'is_regex', 'is_comment', 'is_html_rule',
 		'is_exception', 'options', 'matcher',
-		'anchors', 'tokens']  # type: typing.List[str]
+		'anchors']  # type: typing.List[str]
 
 	def __init__(self, raw_text: str) -> None:
 		self.rule_text = raw_text.strip()
@@ -130,8 +130,6 @@ class JBlockRule():
 		else:
 			self.matcher = jblock.matcher.gen_matcher(self.rule_text, self.anchors)
 
-		self.tokens = self._to_tokens()
-
 	@classmethod
 	def _split_options(cls, options_text):
 		return cls.OPTIONS_SPLIT_RE.split(options_text)
@@ -152,7 +150,7 @@ class JBlockRule():
 			return ("domain", cls._parse_domain_option(text))
 		return cls._parse_option_negation(text)
 
-	def _to_tokens(self) -> typing.MutableSequence[token.Token]:
+	def to_tokens(self) -> typing.MutableSequence[token.Token]:
 		"""Convert rule to tokens as well as possible.
 
 		https://github.com/gorhill/uBlock/blob/4f3aed6fe6347572c38ec9a293f933387b81e5de/src/js/static-net-filtering.js#L1949

@@ -170,13 +170,14 @@ class JBlockBuckets():
 
 
 	def _pick_token(self, rule):
+		tokens = rule.to_tokens()
 		if self.token_frequency:
 			return min(
-				rule.tokens, default=None,
+				tokens, default=None,
 				key=lambda k: self.token_frequency.get(k, 0))
 		else:
-			if rule.tokens:
-				return rule.tokens[0]
+			if tokens:
+				return tokens[0]
 			return None
 
 	def get_token_frequency(self):
