@@ -40,11 +40,10 @@ class JBlockBucket():
 		self.rules = set()  # type: typing.Set[parser.JBlockRule]
 		self.length = 0
 
-		_params = dict((opt, True) for opt in self.supported_options)
 		for r in rules:
 			if (r.matcher is None or
 				(r.matcher.dummy_matcher() and not r.options) or
-				not r.matching_supported(_params)):
+				not r.matching_supported(self.supported_options)):
 				continue
 
 			self.length += 1

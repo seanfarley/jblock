@@ -74,7 +74,6 @@ class JBlockRule():
 		# domain is a special case!
 		"domain",})
 
-	S_OPT_DICT = dict(map(lambda v: (v, True), OPTIONS))
 	OPTIONS_SPLIT_RE = re.compile(',(?=~?(?:%s))' % ('|'.join(OPTIONS)))
 
 	__slots__ = [
@@ -158,7 +157,7 @@ class JBlockRule():
 		https://github.com/gorhill/uBlock/blob/4f3aed6fe6347572c38ec9a293f933387b81e5de/src/js/static-net-filtering.js#L1949
 
 		"""
-		if not self.matching_supported(JBlockRule.S_OPT_DICT):
+		if not self.matching_supported(JBlockRule.OPTIONS):
 			return []
 		if self.is_regex:
 			return token.TokenConverter.regex_to_tokens(self.rule_text[1:-1])
@@ -208,7 +207,7 @@ class JBlockRule():
 
 		return self._url_matches(url)
 
-	def matching_supported(self, options=None) -> bool:
+	def matching_supported(self, options: typing.Union[typing.Dict[str, bool], typing.Set[str]] = None) -> bool:
 		"""Check if we support this rule."""
 		if self.is_comment:
 			return False
@@ -216,9 +215,11 @@ class JBlockRule():
 		if self.is_html_rule:  # TODO should we support element hiding rules at all?
 			return False
 
-		options = options or {}
-		keys = set(options.keys())
-		if not keys.issuperset(self._options_keys()):
+		options = options or set()
+		if isinstance(options, dict):
+			options = set(options.keys())
+
+		if not options.issuperset(self._options_keys()):
 			# some of the required options are not given
 			return False
 
