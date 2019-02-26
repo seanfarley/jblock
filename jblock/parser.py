@@ -79,14 +79,13 @@ class JBlockRule():
 	OPTIONS_SPLIT_RE = re.compile(',(?=~?(?:%s))' % ('|'.join(OPTIONS)))
 
 	__slots__ = [
-		'rule_text', 'is_regex', 'is_comment', 'is_html_rule',
+		'rule_text', 'is_comment', 'is_html_rule',
 		'is_exception', 'options', 'matcher',
 		'anchors']  # type: typing.List[str]
 
 	def __init__(self, raw_text: str) -> None:
 		self.rule_text = raw_text.strip()
 		self.is_comment = not raw_text or raw_text.startswith(('!', '[Adblock'))
-		self.is_regex = self.rule_text.startswith('/') and self.rule_text.endswith('/')
 		self.anchors = set()   # type: typing.Set[AnchorTypes]
 
 		if self.is_comment:
@@ -150,6 +149,9 @@ class JBlockRule():
 			return ("domain", cls._parse_domain_option(text))
 		return cls._parse_option_negation(text)
 
+	def is_regex(self):
+		return isinstance(self.matcher, jblock.matcher.RegexMatcher)
+
 	def to_tokens(self) -> typing.MutableSequence[token.Token]:
 		"""Convert rule to tokens as well as possible.
 
@@ -158,7 +160,7 @@ class JBlockRule():
 		"""
 		if not self.matching_supported(JBlockRule.OPTIONS):
 			return []
-		if self.is_regex:
+		if self.is_regex():
 			return token.TokenConverter.regex_to_tokens(self.rule_text[1:-1])
 		# TODO support '*' regex?
 
