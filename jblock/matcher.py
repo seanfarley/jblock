@@ -26,7 +26,7 @@ from jblock.tools import JBlockParseError, AnchorTypes
 RULE_IS_GENERIC = re.compile(r'[\^\*]')
 SCHEME_STR = "://"
 POST_HOSTNAME_CHARS = re.compile(r'[\/?#]')
-HOSTNAME_END_ANCHORS = AnchorTypes.END.value | AnchorTypes.HOSTNAME.value
+HOSTNAME_END_ANCHORS = AnchorTypes.END | AnchorTypes.HOSTNAME
 
 
 class Matcher:
@@ -120,14 +120,14 @@ class GenericMatcher(Matcher):
 		# * symbol
 		rule = rule.replace("*", '[^ ]*?')
 
-		if AnchorTypes.HOSTNAME.value & anchors:
+		if AnchorTypes.HOSTNAME & anchors:
 			# Prepend a scheme regex
 			prepend = r'^[a-z-]+://(?:[^/?#]+)?' if rule.startswith(r'\.') else r'^[a-z-]+://(?:[^/?#]+\.)?'
 			rule = prepend + rule
-		elif AnchorTypes.START.value & anchors:
+		elif AnchorTypes.START & anchors:
 			rule = '^' + rule
 
-		if AnchorTypes.END.value & anchors:
+		if AnchorTypes.END & anchors:
 			rule = rule + '$'
 
 		return rule

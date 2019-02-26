@@ -110,15 +110,15 @@ class JBlockRule():
 		self.anchors = 0  #  type: int
 		if self.rule_text:
 			if self.rule_text[-1] == '|':
-				self.anchors |= AnchorTypes.END.value
+				self.anchors |= AnchorTypes.END
 				self.rule_text = self.rule_text[:-1]
 			# || in the beginning means beginning of the domain name
 			if self.rule_text[:2] == '||':
-				self.anchors |= AnchorTypes.HOSTNAME.value
+				self.anchors |= AnchorTypes.HOSTNAME
 				self.rule_text = self.rule_text[2:]
 			elif self.rule_text[0] == '|':
 				# | in the beginning means start of the address
-				self.anchors |= AnchorTypes.START.value
+				self.anchors |= AnchorTypes.START
 				self.rule_text = self.rule_text[1:]
 
 		if self.is_comment or self.is_html_rule:
@@ -164,12 +164,12 @@ class JBlockRule():
 			return token.TokenConverter.regex_to_tokens(self.rule_text[1:-1])
 		# TODO support '*' regex?
 
-		if AnchorTypes.HOSTNAME.value & self.anchors and '*' not in self.rule_text:
+		if AnchorTypes.HOSTNAME & self.anchors and '*' not in self.rule_text:
 			return token.TokenConverter.hostname_match_to_tokens(self.rule_text)
 		return token.TokenConverter.generic_filter_to_tokens(
 			self.rule_text,
-			(AnchorTypes.START.value | AnchorTypes.HOSTNAME.value) & self.anchors,
-			AnchorTypes.END.value & self.anchors)
+			(AnchorTypes.START | AnchorTypes.HOSTNAME) & self.anchors,
+			AnchorTypes.END & self.anchors)
 
 	def _url_matches(self, url):
 		return self.matcher.hit(url)

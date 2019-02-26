@@ -19,20 +19,19 @@
 import re
 import collections
 import itertools
-import enum
 
 class JBlockParseError(ValueError):
     pass
 
-class AnchorTypes(enum.Enum):
+class AnchorTypes():
 	"""Ways that a rule can be anchored.
 
 	This is not meant to be used as an enum, but as a bitstring for better performance and memory usage
 
 	"""
-	END =      0x1
-	START =    0x2
-	HOSTNAME = 0x4
+	END      = 0x1  # type: int
+	START    = 0x2  # type: int
+	HOSTNAME = 0x4  # type: int
 
 def domain_variants(domain):
 	"""
