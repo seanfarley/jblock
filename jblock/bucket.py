@@ -21,8 +21,6 @@ import collections
 import operator
 import pprint
 
-import attr
-
 from jblock import parser, token, matcher, tools
 
 class JBlockBucket():
@@ -32,7 +30,7 @@ class JBlockBucket():
 				 'domain_hitlist', 'domain_exceptionlist', 'length']  # type: typing.List[str]
 
 	def __init__(self, rules: typing.MutableSequence[parser.JBlockRule],
-				 supported_options: typing.AbstractSet[str] = parser.JBlockRule.OPTIONS):
+				 supported_options: typing.AbstractSet[str] = parser.JBlockRule.OPTIONS) -> None:
 		self.supported_options = supported_options
 		self.domain_hitlist = collections.defaultdict(set)  # type: typing.Dict[str, typing.Set[parser.JBlockRule]]
 		self.domain_exceptionlist = collections.defaultdict(set)  # type: typing.Dict[str, typing.Set[parser.JBlockRule]]
@@ -100,7 +98,7 @@ ie: an accept and a fail bucket, all with one tag.
 
 	def __init__(self, bucket_token: token.Token,
 				 blacklist: JBlockBucket,
-				 whitelist: JBlockBucket):
+				 whitelist: JBlockBucket) -> None:
 		self.bucket_token = bucket_token
 		self.blacklist = blacklist
 		self.whitelist = whitelist
@@ -115,7 +113,7 @@ class JBlockBuckets():
 	def __init__(self,
 				 rules: typing.List[str],
 				 supported_options=parser.JBlockRule.OPTIONS,
-				 token_frequency: typing.Dict[token.Token, int] = {}):
+				 token_frequency: typing.Dict[token.Token, int] = {}) -> None:
 		self.rules = rules
 		self.unsupported_rules = []  # type: typing.List[token.Token]
 		self.supported_options = supported_options
@@ -234,8 +232,8 @@ class JBlockBuckets():
 		def _bucket_group_to_summary(group: JBlockBucketGroup):
 			return (
 				group.bucket_token + ": " +
-				str(len(group.blacklist)) +
-				", " + str(len(group.whitelist)))
+				str(group.blacklist.__len__()) +
+				", " + str(group.whitelist.__len__()))
 		summary = ["TOTAL: " + str(len(self))]
 		summary += [_bucket_group_to_summary(self.fallback_bucket_group)]
 		groups = sorted(self.bucket_groups.values(), key=len, reverse=True)[:10]

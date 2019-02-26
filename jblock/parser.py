@@ -168,8 +168,8 @@ class JBlockRule():
 			return token.TokenConverter.hostname_match_to_tokens(self.rule_text)
 		return token.TokenConverter.generic_filter_to_tokens(
 			self.rule_text,
-			(AnchorTypes.START | AnchorTypes.HOSTNAME) & self.anchors,
-			AnchorTypes.END & self.anchors)
+			bool((AnchorTypes.START | AnchorTypes.HOSTNAME) & self.anchors),
+			bool(AnchorTypes.END & self.anchors))
 
 	def _url_matches(self, url):
 		return self.matcher.hit(url)
@@ -208,7 +208,7 @@ class JBlockRule():
 
 		return self._url_matches(url)
 
-	def matching_supported(self, options: typing.Union[typing.Dict[str, bool], typing.Set[str]] = None) -> bool:
+	def matching_supported(self, options: typing.Union[typing.Dict[str, bool], typing.AbstractSet[str]] = None) -> bool:
 		"""Check if we support this rule."""
 		if self.is_comment:
 			return False
@@ -220,7 +220,8 @@ class JBlockRule():
 		if isinstance(options, dict):
 			options = set(options.keys())
 
-		if not options.issuperset(self.options.keys()):
+		# AbstractSet dosen't have superset, but all it's implementations in the stdlib do.
+		if not options.issuperset(self.options.keys()):  # type: ignore
 			# some of the required options are not given
 			return False
 
