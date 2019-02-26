@@ -129,13 +129,12 @@ class JBlockBuckets():
 	def _gen_buckets(self):
 		bucket_agg = collections.defaultdict(list)
 		fallback_rules = []
-		s_opt_dict = dict(map(lambda v: (v, True), self.supported_options))
 		for r in self.rules:
 			if isinstance(r, parser.JBlockRule):
 				rule = r
 			else:
 				rule = parser.JBlockRule(r)
-			if not rule.matching_supported(s_opt_dict):
+			if not rule.matching_supported(self.supported_options):
 				self.unsupported_rules.append(r)
 				continue
 			t = self._pick_token(rule)

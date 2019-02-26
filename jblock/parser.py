@@ -74,6 +74,8 @@ class JBlockRule():
 		# domain is a special case!
 		"domain",})
 
+	DROPPED_OPTIONS = set("match-case")
+
 	OPTIONS_SPLIT_RE = re.compile(',(?=~?(?:%s))' % ('|'.join(OPTIONS)))
 
 	__slots__ = [
@@ -99,7 +101,11 @@ class JBlockRule():
 		if not self.is_comment and '$' in self.rule_text:
 			self.rule_text, options_text = self.rule_text.rsplit('$', 1)
 			self.raw_options = self._split_options(options_text)
-			self.options = dict(self._parse_option(opt) for opt in self.raw_options)
+			self.options = dict(
+				self._parse_option(opt) for opt in self.raw_options
+				# Drop some options if we can't handle them
+				if opt not in JBlockRule.DROPPED_OPTIONS)
+
 		else:
 			self.raw_options = []
 			self.options = {}
@@ -147,9 +153,6 @@ class JBlockRule():
 		if text.startswith("domain="):
 			return ("domain", cls._parse_domain_option(text))
 		return cls._parse_option_negation(text)
-
-	def _options_keys(self):
-		return frozenset(self.options.keys()) - set(['match-case'])
 
 	def _to_tokens(self) -> typing.MutableSequence[token.Token]:
 		"""Convert rule to tokens as well as possible.
@@ -219,7 +222,7 @@ class JBlockRule():
 		if isinstance(options, dict):
 			options = set(options.keys())
 
-		if not options.issuperset(self._options_keys()):
+		if not options.issuperset(self.options.keys()):
 			# some of the required options are not given
 			return False
 
