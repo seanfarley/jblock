@@ -25,10 +25,14 @@ class JBlockParseError(ValueError):
     pass
 
 class AnchorTypes(enum.Enum):
-	"Ways that a rule can be anchored."
-	END = 1
-	START = 2
-	HOSTNAME = 3
+	"""Ways that a rule can be anchored.
+
+	This is not meant to be used as an enum, but as a bitstring for better performance and memory usage
+
+	"""
+	END =      0x1
+	START =    0x2
+	HOSTNAME = 0x4
 
 def domain_variants(domain):
 	"""

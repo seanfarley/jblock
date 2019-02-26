@@ -26,7 +26,7 @@ from jblock.tools import JBlockParseError, AnchorTypes
 RULE_IS_GENERIC = re.compile(r'[\^\*]')
 SCHEME_STR = "://"
 POST_HOSTNAME_CHARS = re.compile(r'[\/?#]')
-HOSTNAME_END_ANCHORS = frozenset([AnchorTypes.END, AnchorTypes.HOSTNAME])
+HOSTNAME_END_ANCHORS = AnchorTypes.END.value | AnchorTypes.HOSTNAME.value
 
 
 class Matcher:
@@ -42,7 +42,7 @@ class Matcher:
 		"""Return true if this matcher is a dummy matcher (ideally should be removed)."""
 		return False
 
-def gen_matcher(rule: str, anchors: typing.Container[AnchorTypes]) -> Matcher:
+def gen_matcher(rule: str, anchors: int) -> Matcher:
 	"""Generate and return an appropriate matcher for this rule"""
 	rule = rule.strip()
 	if not rule or rule == "*":
@@ -54,8 +54,7 @@ def gen_matcher(rule: str, anchors: typing.Container[AnchorTypes]) -> Matcher:
 		else: raise JBlockParseError('Error parsing rule "{}"'.format(rule))
 
 	# TODO handle plain hostname matching
-
-	if all(map(functools.partial(operator.contains, anchors), HOSTNAME_END_ANCHORS)):
+	if anchors == HOSTNAME_END_ANCHORS:
 		if RULE_IS_GENERIC.search(rule):
 			return GenericMatcher(rule, anchors)
 		# No special characters, we can get away with plain matching
@@ -80,7 +79,7 @@ class GenericMatcher(Matcher):
 
 	__slots__ = ['rule']  #  type: typing.List[str]
 
-	def __init__(self, rule: str, anchors: typing.Container[AnchorTypes]) -> None:
+	def __init__(self, rule: str, anchors: int) -> None:
 		self.rule = GenericMatcher._rule_to_regex(rule, anchors)  # type: typing.Union[Pattern, str]
 		super().__init__()
 
@@ -94,7 +93,7 @@ class GenericMatcher(Matcher):
 			raise JBlockParseError('Internal error with rule: "{}"'.format(self.rule))
 
 	@staticmethod
-	def _rule_to_regex(rule: str, anchors: typing.Container[AnchorTypes]) -> str:
+	def _rule_to_regex(rule: str, anchors: int) -> str:
 		"""
 		Convert AdBlock rule to a regular expression.
 
@@ -121,14 +120,14 @@ class GenericMatcher(Matcher):
 		# * symbol
 		rule = rule.replace("*", '[^ ]*?')
 
-		if AnchorTypes.HOSTNAME in anchors:
+		if AnchorTypes.HOSTNAME.value & anchors:
 			# Prepend a scheme regex
 			prepend = r'^[a-z-]+://(?:[^/?#]+)?' if rule.startswith(r'\.') else r'^[a-z-]+://(?:[^/?#]+\.)?'
 			rule = prepend + rule
-		elif AnchorTypes.START in anchors:
+		elif AnchorTypes.START.value & anchors:
 			rule = '^' + rule
 
-		if AnchorTypes.END in anchors:
+		if AnchorTypes.END.value & anchors:
 			rule = rule + '$'
 
 		return rule

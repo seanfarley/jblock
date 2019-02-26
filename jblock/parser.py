@@ -107,22 +107,19 @@ class JBlockRule():
 			self.options = {}
 
 		# Set up anchoring
-		self.anchors = []
+		self.anchors = 0  #  type: int
 		if self.rule_text:
 			if self.rule_text[-1] == '|':
-				self.anchors.append(AnchorTypes.END)
+				self.anchors |= AnchorTypes.END.value
 				self.rule_text = self.rule_text[:-1]
 			# || in the beginning means beginning of the domain name
 			if self.rule_text[:2] == '||':
-				self.anchors.append(AnchorTypes.HOSTNAME)
+				self.anchors |= AnchorTypes.HOSTNAME.value
 				self.rule_text = self.rule_text[2:]
 			elif self.rule_text[0] == '|':
 				# | in the beginning means start of the address
-				self.anchors.append(AnchorTypes.START)
+				self.anchors |= AnchorTypes.START.value
 				self.rule_text = self.rule_text[1:]
-
-		# Convert anchors into a tuple to save memory - a list will have some empty capacity, while a tuple won't
-		self.anchors = tuple(self.anchors)   # type: typing.Tuple[AnchorTypes]
 
 		if self.is_comment or self.is_html_rule:
 			# TODO: add support for HTML rules.
@@ -167,12 +164,12 @@ class JBlockRule():
 			return token.TokenConverter.regex_to_tokens(self.rule_text[1:-1])
 		# TODO support '*' regex?
 
-		if AnchorTypes.HOSTNAME in self.anchors and '*' not in self.rule_text:
+		if AnchorTypes.HOSTNAME.value & self.anchors and '*' not in self.rule_text:
 			return token.TokenConverter.hostname_match_to_tokens(self.rule_text)
 		return token.TokenConverter.generic_filter_to_tokens(
 			self.rule_text,
-			AnchorTypes.START in self.anchors or AnchorTypes.HOSTNAME in self.anchors,
-			AnchorTypes.END in self.anchors)
+			(AnchorTypes.START.value | AnchorTypes.HOSTNAME.value) & self.anchors,
+			AnchorTypes.END.value & self.anchors)
 
 	def _url_matches(self, url):
 		return self.matcher.hit(url)
