@@ -43,24 +43,34 @@ class TestEasyList():
 			return f.readlines()
 
 	@pytest.fixture(scope="class")
-	def easylist_buckets(self, easylist):
-		return bucket.JBlockBuckets(easylist)
+	def easylist_buckets(self, easylist, ubo_urls):
+		"A standard, optimized easylist buckets"
+		b = bucket.JBlockBuckets(easylist)
+		for url in ubo_urls:
+			b.should_block(url)
+		b.regen_buckets()
+		return b
+
+	@pytest.fixture(scope="class")
+	def easylist_buckets_nofreq(self, easylist, ubo_urls):
+		b = bucket.JBlockBuckets(easylist)
+		return b
 
 	def test_bulk_bucket_creation(self, easylist, benchmark) -> bucket.JBlockBuckets:
 		benchmark(functools.partial(bucket.JBlockBuckets, easylist))
 
 	@pytest.mark.parametrize('token_freq', [False, True])
-	def test_benchmark_no_options(self, ubo_urls, token_freq, easylist_buckets, benchmark):
+	def test_benchmark_no_options(self, ubo_urls, token_freq, easylist_buckets_nofreq, benchmark):
 		def _bench():
 			for url in ubo_urls:
-				easylist_buckets.should_block(url)
+				easylist_buckets_nofreq.should_block(url)
 		if token_freq:
 			_bench()
 		else:
 			benchmark(_bench)
 			return
 
-		easylist_buckets.regen_buckets()
+		easylist_buckets_nofreq.regen_buckets()
 
 		benchmark(_bench)
 
@@ -73,7 +83,7 @@ class TestEasyList():
 		benchmark(_bench_block)
 
 	@pytest.mark.parametrize('url_index', range(len(PASS_URLS)))
-	def test_pass(self, url_index, easylist_buckets, benchmark):
+	def test_pass(self, url_index, easylist_buckets, benchmark, ubo_urls):
 		url = TestEasyList.PASS_URLS[url_index]
 		def _bench_block():
 			assert easylist_buckets.should_block(url) is False

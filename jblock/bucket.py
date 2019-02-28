@@ -115,7 +115,7 @@ class JBlockBuckets():
 				 supported_options=parser.JBlockRule.OPTIONS,
 				 token_frequency: typing.Dict[token.Token, int] = {}) -> None:
 		self.rules = rules
-		self.unsupported_rules = []  # type: typing.List[token.Token]
+		self.unsupported_rules = []  # type: typing.List[str]
 		self.supported_options = supported_options
 		self.bucket_groups = {}  # type: typing.Dict[token.Token, JBlockBucketGroup]
 		if token_frequency:
