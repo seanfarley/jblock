@@ -171,9 +171,6 @@ class JBlockRule():
 			bool((AnchorTypes.START | AnchorTypes.HOSTNAME) & self.anchors),
 			bool(AnchorTypes.END & self.anchors))
 
-	def _url_matches(self, url):
-		return self.matcher.hit(url)
-
 	def _domain_matches(self, d):
 		domain_rules = self.options['domain']
 		for d in tools.domain_variants(d):
@@ -206,7 +203,7 @@ class JBlockRule():
 			if options[optname] != self.options[optname]:
 				return False
 
-		return self._url_matches(url)
+		return self.matcher.hit(url)
 
 	def matching_supported(self, options: typing.Union[typing.Dict[str, bool], typing.AbstractSet[str]] = None) -> bool:
 		"""Check if we support this rule."""
