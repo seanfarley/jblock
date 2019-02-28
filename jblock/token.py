@@ -51,12 +51,19 @@ class TokenConverter():
 	REGEX_GOOD_TOKEN = re.compile('[%0-9a-z]{2,}')
 
 	@staticmethod
-	def url_to_tokens(s: str) -> typing.MutableSequence[Token]:
+	def url_to_tokens(s: str) -> typing.Iterable[Token]:
 		"""Convert a URL to a list of tokens.
 
 		This is in the critical path, so we need to do as little python as possible ;)
+
+		Converting the list -> set seems painful (+3us), but avoids pathological cases (eg: a bunch of 'ads' tokens over
+		and over).
+
+		Dropping invalid tokens (eg: len < 2) is slower than just processing them, since the failing dict lookup is
+		fast.
+
 		"""
-		return TokenConverter.VALID_TOKEN_CHAR_RE.split(s.lower())
+		return set(TokenConverter.VALID_TOKEN_CHAR_RE.split(s.lower()))
 
 	@staticmethod
 	def url_to_tokens_int(s: str) -> typing.MutableSet[int]:

@@ -70,6 +70,7 @@ class JBlockBucket():
 		# We also have to have more specific rules override less specific rules.
 
 		# TODO try to avoid set copies here
+		# Hopefully, this won't be too expensive, as actually hitting domain rules should be fairly rare
 		for variant in domain_variants:
 			# If a rule already made it in, don't blacklist it
 			exceptions_in_flight.update(self.domain_exceptionlist.get(variant, set()) - rules_in_flight)
@@ -78,8 +79,6 @@ class JBlockBucket():
 
 		rules_to_check.difference_update(exceptions_in_flight)
 		rules_to_check.update(rules_in_flight)
-		# for variant in domain_variants:
-		# 	rules_to_check.difference_update(self.domain_exceptionlist.get(variant, []))
 
 		return any(rule.match_url(url, options, ignore_domain=True) for rule in rules_to_check)
 
