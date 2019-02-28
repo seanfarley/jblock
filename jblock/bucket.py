@@ -114,9 +114,7 @@ class JBlockBuckets():
 				 supported_options=parser.JBlockRule.OPTIONS,
 				 token_frequency: typing.Dict[token.Token, int] = {}) -> None:
 		self.rules = rules
-		self.unsupported_rules = []  # type: typing.List[str]
 		self.supported_options = supported_options
-		self.bucket_groups = {}  # type: typing.Dict[token.Token, JBlockBucketGroup]
 		if token_frequency:
 			self.token_frequency = token_frequency
 		else:
@@ -126,6 +124,8 @@ class JBlockBuckets():
 	def _gen_buckets(self):
 		bucket_agg = collections.defaultdict(list)
 		fallback_rules = []
+		self.bucket_groups = {}  # type: typing.Dict[token.Token, JBlockBucketGroup]
+		self.unsupported_rules = []  # type: typing.List[str]
 		for r in self.rules:
 			if isinstance(r, parser.JBlockRule):
 				rule = r
