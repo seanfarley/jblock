@@ -32,7 +32,7 @@ class TokenConverter():
 
 	VALID_TOKEN_CHARS = frozenset('0123456789%abcdefghijklmnopqrstuvwxyz')
 	VALID_TOKEN_CHARS_INT = frozenset(map(ord, VALID_TOKEN_CHARS))
-	VALID_TOKEN_CHAR_RE = re.compile(r'[^0-9a-z%]+')
+	VALID_TOKEN_CHAR_RE = re.compile(r'[0-9a-z%]{2,}')
 
 	REGEX_TOKEN_RE = re.compile(r'[%0-9A-Za-z]{2,}')
 	# If we match this from start of the string, all hope is lost for this token and the rest
@@ -59,11 +59,9 @@ class TokenConverter():
 		Converting the list -> set seems painful (+3us), but avoids pathological cases (eg: a bunch of 'ads' tokens over
 		and over).
 
-		Dropping invalid tokens (eg: len < 2) is slower than just processing them, since the failing dict lookup is
-		fast.
-
+		Using an iterator seems to be slower due to the needed conversion (.group)
 		"""
-		return set(TokenConverter.VALID_TOKEN_CHAR_RE.split(s.lower()))
+		return set(TokenConverter.VALID_TOKEN_CHAR_RE.findall(s.lower()))
 
 	@staticmethod
 	def url_to_tokens_int(s: str) -> typing.MutableSet[int]:
