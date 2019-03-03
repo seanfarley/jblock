@@ -80,6 +80,16 @@ optimizes this by using a trie to match domains, but I'm using a dictionary of
 whitelist/blacklist domains. On most requests, this leads to a couple failed
 hashtable lookups (which are very cheap), but when we do hit, it can be painful.
 
+*** Multiple Matchers
+
+uBO has a host of blockers to vastly speed up host matching. In order to improve
+performance even more, they use the location of the found token to speed up
+matches (turning a string search into a string comparison). Unfortunately, for
+us, the overhead of function calls dwarfs the time spent matching, so we must
+avoid calling matchers entirely at all cost. To do this, we ensure every match
+is only checked for once (rather than being triggered every time a token appears
+in the url). This means the cost of checking for a match is higher, but we do
+less overall matches (and avoid python's huge function call overhead).
 
 * Correctness
 

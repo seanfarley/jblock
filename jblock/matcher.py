@@ -23,6 +23,7 @@ import functools
 
 from jblock.tools import JBlockParseError, AnchorTypes
 
+# "Generic" rules are ones that need special attention, ie: can't simply be string searches
 RULE_IS_GENERIC = re.compile(r'[\^\*]')
 SCHEME_STR = "://"
 POST_HOSTNAME_CHARS = re.compile(r'[\/?#]')
@@ -41,6 +42,26 @@ class Matcher:
 	def dummy_matcher(self) -> bool:
 		"""Return true if this matcher is a dummy matcher (ideally should be removed)."""
 		return False
+
+	# Helper functions
+	@staticmethod
+	def hn_anchored_p(url, match_index):
+		"""Determine if a url's match is within the hostname part of a url.
+
+		https://github.com/gorhill/uBlock/blob/c92bf080e196d56bb7f1712c8c225628681fd036/src/js/static-net-filtering.js#L217"""
+		scheme_index = url.find(SCHEME_STR)
+		if scheme_index == -1:
+			return False
+
+		scheme_index += len(SCHEME_STR)
+		if match_index <= scheme_index:
+			return True
+
+		if (url[match_index - 1] != '.' or
+			POST_HOSTNAME_CHARS.search(url, scheme_index, match_index)):
+			return False
+
+		return True
 
 def gen_matcher(rule: str, anchors: int) -> Matcher:
 	"""Generate and return an appropriate matcher for this rule"""
@@ -155,20 +176,7 @@ class PlainHnEndAnchoredMatcher(Matcher):
 		if not url.endswith(self.rule):
 			return False
 		match_index = len(url) - len(self.rule)
-
-		scheme_index = url.find(SCHEME_STR)
-		if scheme_index == -1:
-			return False
-		scheme_index += len(SCHEME_STR)
-
-		if match_index <= scheme_index:
-			return True
-
-		if (url[match_index - 1] != '.' or
-			POST_HOSTNAME_CHARS.search(url[scheme_index:match_index])):
-			return False
-
-		return True
+		return self.hn_anchored_p(url, match_index)
 
 class PlainHnAnchoredMatcher(Matcher):
 
@@ -179,20 +187,7 @@ class PlainHnAnchoredMatcher(Matcher):
 		super().__init__()
 
 	def hit(self, url: str) -> bool:
-		scheme_index = url.find(SCHEME_STR)
-		if scheme_index == -1:
-			return False
-
-		scheme_index += len(SCHEME_STR)
-		match_index = url.find(self.rule, scheme_index)
+		match_index = url.find(self.rule)
 		if match_index < 1:
 			return False
-
-		if match_index <= scheme_index:
-			return True
-
-		if (url[match_index - 1] != '.' or
-			POST_HOSTNAME_CHARS.search(url[scheme_index:match_index])):
-			return False
-
-		return True
+		return self.hn_anchored_p(url, match_index)
