@@ -27,7 +27,6 @@ from jblock.tools import JBlockParseError, AnchorTypes
 RULE_IS_GENERIC = re.compile(r'[\^\*]')
 SCHEME_STR = "://"
 POST_HOSTNAME_CHARS = re.compile(r'[\/?#]')
-HOSTNAME_END_ANCHORS = AnchorTypes.END | AnchorTypes.HOSTNAME
 
 
 class Matcher:
@@ -68,6 +67,15 @@ class Matcher:
 
 		return True
 
+class RuleMatcher(Matcher):
+	"""A Matcher that stores a plaintext rule with no changes."""
+
+	__slots__ = ['rule']  #  type: typing.List[str]
+
+	def __init__(self, rule: str) -> None:
+		self.rule = rule
+		super().__init__()
+
 def gen_matcher(rule: str, anchors: int) -> Matcher:
 	"""Generate and return an appropriate matcher for this rule"""
 	rule = rule.strip()
@@ -80,18 +88,27 @@ def gen_matcher(rule: str, anchors: int) -> Matcher:
 		else: raise JBlockParseError('Error parsing rule "{}"'.format(rule))
 
 	# TODO handle plain hostname matching
-	if anchors == HOSTNAME_END_ANCHORS:
+	if anchors == AnchorTypes.END | AnchorTypes.HOSTNAME:
 		if RULE_IS_GENERIC.search(rule):
 			return GenericMatcher(rule, anchors)
 		# No special characters, we can get away with plain matching
 		return PlainHnEndAnchoredMatcher(rule)
 
-	if anchors == AnchorTypes.HOSTNAME:
+	elif anchors == AnchorTypes.HOSTNAME:
 		if not RULE_IS_GENERIC.search(rule):
 			return PlainHnAnchoredMatcher(rule)
 		return GenericMatcher(rule, anchors)
 
-	return GenericMatcher(rule, anchors)
+	elif RULE_IS_GENERIC.search(rule):
+		return GenericMatcher(rule, anchors)
+
+	elif anchors == AnchorTypes.START:
+		return PlainLeftAnchoredMatcher(rule)
+	elif anchors == AnchorTypes.END:
+		return PlainRightAnchoredMatcher(rule)
+	elif anchors == AnchorTypes.START | AnchorTypes.END:
+		return PlainExactMatcher(rule)
+	return PlainMatcher(rule)
 
 class AlwaysTrueMatcher(Matcher):
 	"""Matcher that always returns True"""
@@ -174,30 +191,29 @@ class RegexMatcher(Matcher):
 	def hit(self, url: str) -> bool:
 		return bool(self.rule.search(url))
 
-class PlainHnEndAnchoredMatcher(Matcher):
-
-	__slots__ = ['rule']  #  type: typing.List[str]
-
-	def __init__(self, rule: str) -> None:
-		self.rule = rule
-		super().__init__()
-
+class PlainHnEndAnchoredMatcher(RuleMatcher):
 	def hit(self, url: str) -> bool:
 		if not url.endswith(self.rule):
 			return False
 		match_index = len(url) - len(self.rule)
 		return self.hn_anchored_p(url, match_index)
 
-class PlainHnAnchoredMatcher(Matcher):
-
-	__slots__ = ['rule']  #  type: typing.List[str]
-
-	def __init__(self, rule: str) -> None:
-		self.rule = rule
-		super().__init__()
-
+class PlainHnAnchoredMatcher(RuleMatcher):
 	def hit(self, url: str) -> bool:
 		match_index = url.find(self.rule)
 		if match_index < 0:
 			return False
 		return self.hn_anchored_p(url, match_index)
+
+class PlainLeftAnchoredMatcher(RuleMatcher):
+	def hit(self, url: str) -> bool:
+		return url.startswith(self.rule)
+class PlainRightAnchoredMatcher(RuleMatcher):
+	def hit(self, url: str) -> bool:
+		return url.endswith(self.rule)
+class PlainExactMatcher(RuleMatcher):
+	def hit(self, url: str) -> bool:
+		return url == self.rule
+class PlainMatcher(RuleMatcher):
+	def hit(self, url: str) -> bool:
+		return self.rule in url
