@@ -43,13 +43,18 @@ class Matcher:
 		"""Return true if this matcher is a dummy matcher (ideally should be removed)."""
 		return False
 
+	@staticmethod
+	@functools.lru_cache()
+	def scheme_index(url):
+		return url.find(SCHEME_STR)
+
 	# Helper functions
 	@staticmethod
 	def hn_anchored_p(url, match_index):
 		"""Determine if a url's match is within the hostname part of a url.
 
 		https://github.com/gorhill/uBlock/blob/c92bf080e196d56bb7f1712c8c225628681fd036/src/js/static-net-filtering.js#L217"""
-		scheme_index = url.find(SCHEME_STR)
+		scheme_index = Matcher.scheme_index(url)
 		if scheme_index == -1:
 			return False
 
@@ -79,7 +84,12 @@ def gen_matcher(rule: str, anchors: int) -> Matcher:
 		if RULE_IS_GENERIC.search(rule):
 			return GenericMatcher(rule, anchors)
 		# No special characters, we can get away with plain matching
-		# return PlainHnEndAnchoredMatcher(rule)
+		return PlainHnEndAnchoredMatcher(rule)
+
+	if anchors == AnchorTypes.HOSTNAME:
+		if not RULE_IS_GENERIC.search(rule):
+			return PlainHnAnchoredMatcher(rule)
+		return GenericMatcher(rule, anchors)
 
 	return GenericMatcher(rule, anchors)
 
@@ -188,6 +198,6 @@ class PlainHnAnchoredMatcher(Matcher):
 
 	def hit(self, url: str) -> bool:
 		match_index = url.find(self.rule)
-		if match_index < 1:
+		if match_index < 0:
 			return False
 		return self.hn_anchored_p(url, match_index)
