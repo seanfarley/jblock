@@ -203,7 +203,7 @@ class JBlockBuckets():
 
 		for t in tokens:
 			group = self.bucket_groups.get(t, None)
-			if group and group.blacklist.hit(url, domain_variants, options):
+			if group is not None and group.blacklist.hit(url, domain_variants, options):
 				block = True
 				break
 
@@ -215,7 +215,7 @@ class JBlockBuckets():
 
 		for t in tokens:
 			group = self.bucket_groups.get(t, None)
-			if group and group.whitelist.hit(url, domain_variants, options):
+			if group is not None and group.whitelist.hit(url, domain_variants, options):
 				block = False
 				break
 		if block:
