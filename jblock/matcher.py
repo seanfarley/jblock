@@ -76,16 +76,17 @@ class RuleMatcher(Matcher):
 		self.rule = rule
 		super().__init__()
 
-def gen_matcher(rule: str, anchors: int) -> Matcher:
-	"""Generate and return an appropriate matcher for this rule"""
+def gen_matcher(rule: str, anchors: int, is_regex: bool) -> Matcher:
+	"""Generate and return an appropriate matcher for this rule
+
+	Returns the matcher, modified rules, and modified anchors"""
 	rule = rule.strip()
 	if not rule or rule == "*":
 		return AlwaysTrueMatcher()
 
 	# Check if rule is regexp
-	if rule.startswith('/') and rule.endswith('/'):
-		if len(rule) > 1: return RegexMatcher(rule[1:-1])
-		else: raise JBlockParseError('Error parsing rule "{}"'.format(rule))
+	if is_regex:
+		return RegexMatcher(rule)
 
 	# TODO handle plain hostname matching
 	if anchors == AnchorTypes.END | AnchorTypes.HOSTNAME:

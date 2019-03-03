@@ -121,13 +121,34 @@ class JBlockRule():
 				self.anchors |= AnchorTypes.START
 				self.rule_text = self.rule_text[1:]
 
+		# Check if rule is regexp
+		is_regex = False
+		if self.rule_text.startswith('/') and self.rule_text.endswith('/'):
+			if len(self.rule_text) > 1:
+				is_regex = True
+				self.rule_text = self.rule_text[1:-1]
+			else: raise tools.JBlockParseError(
+					'Error parsing rule "{}"'.format(self.rule_text))
+
+		# Remove un-needed leading/trailing '*' on non-regexp rules
+		if not is_regex and self.rule_text.startswith('*'):
+			# The reason for the extra match is that we can't remove the * in some cases:
+			# https://github.com/gorhill/uBlock/issues/1669#issuecomment-224822448
+			self.rule_text = re.sub(r'^\*+([^%0-9a-zA-Z])', r'\1', self.rule_text)
+			# Not 100% sure if we can remove the anchors, but since
+			# ubo does it we're leaving performance on the table otherwise.
+			self.anchors &= ~(AnchorTypes.HOSTNAME | AnchorTypes.START)
+		if not is_regex and self.rule_text.endswith('*'):
+			self.rule_text = re.sub(r'([^%0-9a-zA-Z])\*+$', r'\1', self.rule_text)
+			self.anchors &= ~AnchorTypes.END
+
 		if self.is_comment or self.is_html_rule:
 			# TODO: add support for HTML rules.
 			# We should split the rule into URL and HTML parts,
 			# convert URL part to a regex and parse the HTML part.
 			self.matcher = jblock.matcher.AlwaysTrueMatcher()  # type: jblock.matcher.Matcher
 		else:
-			self.matcher = jblock.matcher.gen_matcher(self.rule_text, self.anchors)
+			self.matcher = jblock.matcher.gen_matcher(self.rule_text, self.anchors, is_regex)
 
 	@classmethod
 	def _split_options(cls, options_text):
