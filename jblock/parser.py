@@ -199,13 +199,16 @@ class JBlockRule():
 				return domain_rules[d]
 		return not any(domain_rules.values())
 
-	def match_url(self, url, options=None, *, ignore_domain=False):
+	def match_url(self, url, options=frozenset(), *, ignore_domain=False):
 		"""
 		Return if this rule matches the URL.
 
 		ignore_domain: if we shoudn't do any domain checking (assuming it happened before already)
 		"""
-		options = options or {}
+		return self.match_url_fast(url, options, ignore_domain)
+
+	def match_url_fast(self, url, options, ignore_domain):
+		"""Faster version of match_url which does not handle optional arguments"""
 		for optname in self.options:
 			if optname == 'match-case':  # TODO implement match-case
 				continue

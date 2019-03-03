@@ -61,7 +61,7 @@ class JBlockBucket():
 			else:
 				self.rules.add(r)
 
-	def hit(self, url, domain_variants, options=None):
+	def hit(self, url, domain_variants, options=frozenset()):
 		"Return true if any of the rules in this bucket are matched by the url."
 		rules_to_check = set(self.rules)
 		rules_in_flight = set()
@@ -80,7 +80,7 @@ class JBlockBucket():
 		rules_to_check.difference_update(exceptions_in_flight)
 		rules_to_check.update(rules_in_flight)
 
-		return any(rule.match_url(url, options, ignore_domain=True) for rule in rules_to_check)
+		return any(rule.match_url_fast(url, options, True) for rule in rules_to_check)
 
 	def __len__(self):
 		return self.length
@@ -185,7 +185,7 @@ class JBlockBuckets():
 		"""Regenerate buckets to take advantage of (new) token profiling."""
 		self._gen_buckets()
 
-	def should_block(self, url: str, options=None) -> bool:
+	def should_block(self, url: str, options=frozenset()) -> bool:
 		"""Decide if we should block a URL with OPTIONS.
 		Probabilities are: No Hit, Hit on Block, Hit on Block with Override
 
