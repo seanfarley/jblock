@@ -61,7 +61,7 @@ class JBlockBucket():
 			else:
 				self.rules.add(r)
 
-	def hit(self, url, domain_variants, options=frozenset()):
+	def hit(self, url, domain_variants, options):
 		"Return true if any of the rules in this bucket are matched by the url."
 		rules_to_check = set(self.rules)
 		rules_in_flight = set()
