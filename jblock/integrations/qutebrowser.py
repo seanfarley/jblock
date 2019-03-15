@@ -72,7 +72,7 @@ if interceptor:
 		global blocking_num
 		start_time = time.time()
 		request_scheme = info.request_url.scheme()
-		if request_scheme == "data":
+		if request_scheme in {"data", "blob"}:
 			return
 		url = info.request_url.toString()
 		resource_type = info.resource_type
