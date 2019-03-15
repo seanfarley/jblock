@@ -40,7 +40,15 @@ jblock_buckets = _init_jblock()
 if interceptor:
 	def jblock_intercept(info: interceptor.Request):
 		url = info.request_url.toString()
-		options = {'domain': info.first_party_url.host()}
+		resource_type = info.resource_type
+		# TODO implement third-party
+		options = {'domain': info.first_party_url.host(),
+				   'script': resource_type == interceptor.ResourceType.script,
+				   'image': resource_type == interceptor.ResourceType.image,
+				   'stylesheet': resource_type == interceptor.ResourceType.stylesheet,
+				   'object': resource_type == interceptor.ResourceType.object,
+				   'subdocument': resource_type in {interceptor.ResourceType.sub_frame, interceptor.ResourceType.sub_resource},
+				   'object': resource_type == interceptor.ResourceType.object}
 		if jblock_buckets.should_block(url, options):
 			info.block()
 
