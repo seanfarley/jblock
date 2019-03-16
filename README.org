@@ -151,6 +151,7 @@ please read all the quirks below.
   over 100 mb.
 - Frequencies of certain parts of URLs are recorded and saved to disk in order
   to optimize the bucket layout to your browsing habits.
+- Performance on versions of python ~>=~ 3.7 are much better.
 
 * Usage (qutebrowser)
 
