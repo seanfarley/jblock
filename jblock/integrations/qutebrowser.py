@@ -55,7 +55,7 @@ def jblock_update():
 def jblock_reload():
 	global init_time
 	global jblock_buckets
-	init_time = time.monotonic()
+	init_time = time.perf_counter()
 	lines = []
 	if JBLOCK_RULES.exists():
 		with open(JBLOCK_RULES, "r") as f:
@@ -67,7 +67,7 @@ def jblock_reload():
 			freq = pickle.load(f)
 
 	jblock_buckets = bucket.JBlockBuckets(lines, token_frequency=freq)
-	init_time = time.monotonic() - init_time
+	init_time = time.perf_counter() - init_time
 
 # Handle loading/saving token frequency
 @cmdutils.register()
@@ -91,7 +91,7 @@ def jblock_intercept(info: interceptor.Request):
 	global jblock_buckets
 	global blocking_time
 	global blocking_num
-	start_time = time.monotonic()
+	start_time = time.perf_counter()
 	request_scheme = info.request_url.scheme()
 	if request_scheme in {"data", "blob"}:
 		return
@@ -115,7 +115,7 @@ def jblock_intercept(info: interceptor.Request):
 		'third-party': not first_party,}
 	if jblock_buckets.should_block(url, options):
 		info.block()
-	blocking_time += time.monotonic() - start_time
+	blocking_time += time.perf_counter() - start_time
 	blocking_num += 1
 
 interceptor.register(jblock_intercept)
