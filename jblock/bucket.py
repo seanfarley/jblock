@@ -112,13 +112,13 @@ class JBlockBuckets():
 	def __init__(self,
 				 rules: typing.List[str],
 				 supported_options=parser.JBlockRule.OPTIONS,
-				 token_frequency: typing.Dict[token.Token, int] = {}) -> None:
+				 token_frequency: typing.Counter[token.Token] = None) -> None:
 		self.rules = rules
 		self.supported_options = supported_options
 		if token_frequency:
 			self.token_frequency = token_frequency
 		else:
-			self.token_frequency = collections.defaultdict(int)  # type: typing.Dict[token.Token, int]
+			self.token_frequency = collections.Counter()  # type: typing.Counter[token.Token]
 		self._gen_buckets()
 
 	def _gen_buckets(self):
@@ -180,6 +180,10 @@ class JBlockBuckets():
 	def get_token_frequency(self):
 		"""Get a token frequency object, so we can speed up accesses next time we create an adblocker."""
 		return self.token_frequency
+
+	def set_token_frequency(self, t):
+		"""Set a token frequency object, previously returned by get_token_frequency"""
+		self.token_frequency = t
 
 	def regen_buckets(self):
 		"""Regenerate buckets to take advantage of (new) token profiling."""

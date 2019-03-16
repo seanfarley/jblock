@@ -17,7 +17,7 @@
 
 ## TODO FIXME make config-source not be super painful
 
-import sys, os, time
+import sys, os, time, pickle
 import urllib.request
 
 from jblock import bucket
@@ -26,6 +26,7 @@ config = config  # type: ConfigAPI # noqa: F821 pylint: disable=E0602,C0103
 c = c  # type: ConfigContainer # noqa: F821 pylint: disable=E0602,C0103
 
 JBLOCK_RULES = config.datadir / "jblock-rules"
+JBLOCK_FREQ = config.datadir / "jblock-freq"
 
 try:
 	from qutebrowser.api import interceptor, cmdutils, message
@@ -55,41 +56,62 @@ if interceptor:
 	def jblock_reload():
 		global init_time
 		global jblock_buckets
-		init_time = time.time()
+		init_time = time.monotonic()
 		lines = []
 		if JBLOCK_RULES.exists():
 			with open(JBLOCK_RULES, "r") as f:
 				lines.extend(f.readlines())
-		jblock_buckets = bucket.JBlockBuckets(lines)
-		init_time = time.time() - init_time
 
+		freq = None
+		if JBLOCK_FREQ.exists():
+			with open(JBLOCK_FREQ, "rb") as f:
+				freq = pickle.load(f)
+
+		jblock_buckets = bucket.JBlockBuckets(lines, token_frequency=freq)
+		init_time = time.monotonic() - init_time
+
+	# Handle loading/saving token frequency
+	@cmdutils.register()
+	def jblock_save_frequency():
+		global jblock_buckets
+		freq = jblock_buckets.get_token_frequency()
+		with open(JBLOCK_FREQ, "wb") as f:
+			pickle.dump(freq, f)
+
+	# First time init
 	jblock_reload()
 
+	# Handle loading/saving token frequency
+	@cmdutils.register()
+	def jblock_print_frequency(quiet=False):
+		global jblock_buckets
+		freq = jblock_buckets.get_token_frequency()
+		message.info(str(freq))
 
 	def jblock_intercept(info: interceptor.Request):
 		global jblock_buckets
 		global blocking_time
 		global blocking_num
-		start_time = time.time()
+		start_time = time.monotonic()
 		request_scheme = info.request_url.scheme()
 		if request_scheme in {"data", "blob"}:
 			return
 		url = info.request_url.toString()
 		resource_type = info.resource_type
 		# TODO implement third-party
-		options = {'domain': info.first_party_url.host(),
-				   'script': resource_type == interceptor.ResourceType.script,
-				   'image': resource_type == interceptor.ResourceType.image,
-				   'stylesheet': resource_type == interceptor.ResourceType.stylesheet,
-				   'object': resource_type == interceptor.ResourceType.object,
-				   'subdocument': resource_type in
-				   {interceptor.ResourceType.sub_frame,
-					interceptor.ResourceType.sub_resource},
-				   'object': resource_type == interceptor.ResourceType.object
-		}
+		options = {
+			'domain': info.first_party_url.host(),
+			'script': resource_type == interceptor.ResourceType.script,
+			'image': resource_type == interceptor.ResourceType.image,
+			'stylesheet': resource_type == interceptor.ResourceType.stylesheet,
+			'object': resource_type == interceptor.ResourceType.object,
+			'subdocument': resource_type in
+			{interceptor.ResourceType.sub_frame,
+			 interceptor.ResourceType.sub_resource},
+			'object': resource_type == interceptor.ResourceType.object}
 		if jblock_buckets.should_block(url, options):
 			info.block()
-		blocking_time += time.time() - start_time
+		blocking_time += time.monotonic() - start_time
 		blocking_num += 1
 
 	interceptor.register(jblock_intercept)
@@ -109,4 +131,8 @@ if interceptor:
 
 	@cmdutils.register()
 	def jblock_total_block_time():
+		message.info(str(blocking_time))
+
+	@cmdutils.register()
+	def dump_frequencies():
 		message.info(str(blocking_time))
