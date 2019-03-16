@@ -19,6 +19,7 @@
 import re
 import collections
 import itertools
+import functools
 
 class JBlockParseError(ValueError):
     pass
@@ -81,3 +82,13 @@ def combined_regex(regexes, flags=re.IGNORECASE):
 		return None
 
 	return re.compile(joined_regexes, flags=flags)
+
+
+IP_ADDR_NAIVE = re.compile(r'^\d+\.\d+\.\d+\.\d+$|^\[[\da-zA-Z:]+\]$')
+@functools.lru_cache(maxsize=2**8)
+def get_first_party_domain(host: str) -> str:
+	"""Get the part of a url to compare 'first party' domains."""
+	# TODO we should probably use the public suffix list here, instead of assuming TLD is 1 block
+	if not IP_ADDR_NAIVE.search(host):
+		return ".".join(host.rsplit('.', 2)[-2:])
+	return host

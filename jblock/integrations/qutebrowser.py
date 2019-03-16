@@ -20,7 +20,7 @@
 import sys, os, time, pickle
 import urllib.request
 
-from jblock import bucket
+from jblock import bucket, tools
 
 config = config  # type: ConfigAPI # noqa: F821 pylint: disable=E0602,C0103
 c = c  # type: ConfigContainer # noqa: F821 pylint: disable=E0602,C0103
@@ -96,11 +96,14 @@ if interceptor:
 		request_scheme = info.request_url.scheme()
 		if request_scheme in {"data", "blob"}:
 			return
+
+		request_host, context_host  = info.request_url.host(), info.first_party_url.host()
+		first_party = tools.get_first_party_domain(context_host) == tools.get_first_party_domain(request_host)
+
 		url = info.request_url.toString()
 		resource_type = info.resource_type
-		# TODO implement third-party
 		options = {
-			'domain': info.first_party_url.host(),
+			'domain': context_host,
 			'script': resource_type == interceptor.ResourceType.script,
 			'image': resource_type == interceptor.ResourceType.image,
 			'stylesheet': resource_type == interceptor.ResourceType.stylesheet,
@@ -109,7 +112,8 @@ if interceptor:
 			{interceptor.ResourceType.sub_frame,
 			 interceptor.ResourceType.sub_resource},
 			'object': resource_type == interceptor.ResourceType.object,
-			'document': resource_type == interceptor.ResourceType.main_frame,}
+			'document': resource_type == interceptor.ResourceType.main_frame,
+			'third-party': not first_party,}
 		if jblock_buckets.should_block(url, options):
 			info.block()
 		blocking_time += time.monotonic() - start_time
