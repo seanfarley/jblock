@@ -48,8 +48,7 @@ test_benchmark_no_options[False]     611,593.3661 (>1000.0)  630,946.3100 (>1000
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #+end_example
 
-Unfortunately, there's currently a regression from cpython when running with
-pypy, as it looks like pypy is slower than cpython when running ~re~.
+pypy currently performs slightly better than cpython.
 
 Performance of loading lists is abysmal currently, with loading easylist taking
 several seconds.
