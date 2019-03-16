@@ -132,7 +132,3 @@ if interceptor:
 	@cmdutils.register()
 	def jblock_total_block_time():
 		message.info(str(blocking_time))
-
-	@cmdutils.register()
-	def dump_frequencies():
-		message.info(str(blocking_time))
