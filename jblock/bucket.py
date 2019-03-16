@@ -112,7 +112,7 @@ class JBlockBuckets():
 	def __init__(self,
 				 rules: typing.List[str],
 				 supported_options=parser.JBlockRule.OPTIONS,
-				 token_frequency: typing.Counter[token.Token] = None) -> None:
+				 token_frequency: 'typing.Counter[token.Token]' = None) -> None:
 		self.rules = rules
 		self.supported_options = supported_options
 		if token_frequency:
