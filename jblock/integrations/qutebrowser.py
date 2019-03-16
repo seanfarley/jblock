@@ -17,16 +17,21 @@
 
 ## TODO FIXME make config-source not be super painful
 
-import sys, os, time, pickle
+import sys, os, time, pickle, threading
 import urllib.request
 
 from jblock import bucket, tools
+
+# Since this is a qb integration, we get PyQt5 for free
+from PyQt5.QtCore import QTimer
 
 config = config  # type: ConfigAPI # noqa: F821 pylint: disable=E0602,C0103
 c = c  # type: ConfigContainer # noqa: F821 pylint: disable=E0602,C0103
 
 JBLOCK_RULES = config.datadir / "jblock-rules"
 JBLOCK_FREQ = config.datadir / "jblock-freq"
+# 1 hour in s
+JBLOCK_PERIODIC_TIME = 1 * 60 * 60
 
 try:
 	from qutebrowser.api import interceptor, cmdutils, message
@@ -137,3 +142,12 @@ if interceptor:
 	@cmdutils.register()
 	def jblock_total_block_time():
 		message.info(str(blocking_time))
+
+
+	# Code that will run periodically
+	def _periodic_callback():
+		jblock_save_frequency()
+		t = threading.Timer(JBLOCK_PERIODIC_TIME, _periodic_callback)
+		t.daemon = True
+		t.start()
+	_periodic_callback()

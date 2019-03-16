@@ -13,8 +13,8 @@ very well documented either.
 
 [[https://www.youtube.com/watch?v=Bd29bqfuCSc&feature=youtu.be][Here's a demo, but expect it to be outdated very quickly]].
 
-Don't build anything on this yet, I expect to redo the API (which still mirrors
-the adblockparser api) to be more efficient.
+The API is subject to change, but shouldn't require large changes to your
+application if you depend on this as a library.
 
 * Performance
 
@@ -59,8 +59,8 @@ of debug information for no reason.
 
 ** Tricks
 
-We're using a couple tricks which aren't widely used. Hopefully other projects
-can become faster using some of these tricks.
+I'm using a couple tricks which aren't widely used. Hopefully other projects can
+become faster using some of these tricks.
 
 *** Picking Optimal Tokens
 
@@ -96,7 +96,11 @@ less overall matches (and avoid python's huge function call overhead).
 Honestly, I have no clue. There's not much in large datasets to compare against,
 but this (at least) passes the examples in the abp spec.
 
-I suspect there is some questionable logic in whitelisting domains.
+** qutebrowser
+- We miss the [[https://testpages.adblockplus.org/en/exceptions/document][exception document test]] as qtwebengine tells us inline images are
+  still images.
+- All ~blob~ and ~data~ urls are passed by default (blocking them would hurt
+  performance a lot).
 
 * Features
 
@@ -116,25 +120,50 @@ Unsupported rules are silently ignored.
 * Installation
 ** Dependencies
 - ~python3~ or ~pypy3~ at language spec ~3.5~.
+
 ** Tests
 - ~pytest-benchmark~
+- ~mypy~
 
 If you pass pep8, you fail the style tests.
 
 There are make targets for common operations.
 
 ** qutebrowser
+
+DO NOT EXPECT THIS TO 'JUST WORK'.
+
 This snippet in config.py seems to work for now on the git version of
-qutebrowser, if you clone this repo in the config directory. It PULLS EASYLIST
-FROM THIS REPO and not from the web. If you run ~:config-source~ it will reinit
-everything, causing double latency and memory usage (so don't do it). Please
-don't depend on anything here, it's all hacky and not done ~:]~.
+qutebrowser, if you clone this repo in the config directory. If you use this,
+please read all the quirks below.
 
 #+begin_src python
   import sys, os
   sys.path.append(os.path.join(sys.path[0], 'jblock'))
   config.source("jblock/jblock/integrations/qutebrowser.py")
 #+end_src
+
+*** Quirks
+
+- If you run ~:config-source~ it will reinit everything, causing double latency
+  and memory usage (so don't do it).
+- We use a lot of memory at the moment. Expect your memory usage to increase
+  over 100 mb.
+- Frequencies of certain parts of URLs are recorded and saved to disk in order
+  to optimize the bucket layout to your browsing habits.
+
+* Usage (qutebrowser)
+
+- Set ~content.host_blocking.enabled~ to false, to avoid complications
+- Populate ~content.host_blocking.lists~ with abp style lists.
+- Run ~:jblock-update~. This will generate ~<datadir>/jblock-rules~
+- Run ~:jblock-reload~
+- In order to achieve optimal performance, you will need to build a frequency
+  database. This is done every hour automatically, but needs a restart.
+  - To do this manually, browse normally for a while, then run
+    ~:jblock-save-frequency~. On next start or ~:jblock-reload~, the frequency
+    will be applied.
+  - The frequency file will be saved, pickled, in ~<datadir>/jblock-freq~
 
 * Inspiration/Sources
 - [[https://github.com/scrapinghub/adblockparser][adblockparser]]
