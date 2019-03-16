@@ -108,7 +108,8 @@ if interceptor:
 			'subdocument': resource_type in
 			{interceptor.ResourceType.sub_frame,
 			 interceptor.ResourceType.sub_resource},
-			'object': resource_type == interceptor.ResourceType.object}
+			'object': resource_type == interceptor.ResourceType.object,
+			'document': resource_type == interceptor.ResourceType.main_frame,}
 		if jblock_buckets.should_block(url, options):
 			info.block()
 		blocking_time += time.monotonic() - start_time
