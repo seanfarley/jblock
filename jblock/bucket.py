@@ -22,6 +22,7 @@ import operator
 import pprint
 
 from jblock import parser, token, matcher, tools
+from jblock.vendor import regexopt
 
 class JBlockBucket():
 	"""Class representing a single bucket."""
@@ -126,6 +127,9 @@ class JBlockBuckets():
 		fallback_rules = []
 		self.bucket_groups = {}  # type: typing.Dict[token.Token, JBlockBucketGroup]
 		self.unsupported_rules = []  # type: typing.List[str]
+		self.plain_blacklist = []
+		self.plain_exceptionlist = []
+		self.plain_len = 0
 		for r in self.rules:
 			if isinstance(r, parser.JBlockRule):
 				rule = r
@@ -134,6 +138,14 @@ class JBlockBuckets():
 			if not rule.matching_supported(self.supported_options):
 				self.unsupported_rules.append(r)
 				continue
+
+			if not rule.options and isinstance(rule.matcher, matcher.PlainMatcher):
+				if rule.is_exception:
+					self.plain_exceptionlist.append(rule.matcher.rule)
+				else:
+					self.plain_blacklist.append(rule.matcher.rule)
+				continue
+
 			t = self._pick_token(rule)
 			if t is None:
 				fallback_rules.append(rule)
@@ -142,6 +154,14 @@ class JBlockBuckets():
 		for k, v in bucket_agg.items():
 			self.bucket_groups[k] = self._rule_list_to_bucket_group(k, v)
 		self.fallback_bucket_group = self._rule_list_to_bucket_group("FALLBACK", fallback_rules)
+
+		if self.plain_blacklist:
+			self.plain_len += len(self.plain_blacklist)
+			self.plain_blacklist = re.compile(regexopt.regex_opt(self.plain_blacklist))
+		if self.plain_exceptionlist:
+			self.plain_len += len(self.plain_exceptionlist)
+			self.plain_exceptionlist = re.compile(regexopt.regex_opt(self.plain_exceptionlist))
+
 		# import pprint
 		# pprint.pprint(bucket_agg)
 		# pprint.pprint(sorted(list(map(len, bucket_agg.values()))))
@@ -209,11 +229,14 @@ class JBlockBuckets():
 		# Update token frequency map (so we can get faster later)
 		for t in tokens: self.token_frequency[t] += 1
 
-		for t in tokens:
-			group = self.bucket_groups.get(t, None)
-			if group is not None and group.blacklist.hit(url, domain_variants, options):
-				block = True
-				break
+		if self.plain_blacklist and self.plain_blacklist.search(url):
+			block = True
+		if not block:
+			for t in tokens:
+				group = self.bucket_groups.get(t, None)
+				if group is not None and group.blacklist.hit(url, domain_variants, options):
+					block = True
+					break
 
 		if not block:
 			block = self.fallback_bucket_group.blacklist.hit(url, domain_variants, options)
@@ -221,18 +244,21 @@ class JBlockBuckets():
 		if not block:
 			return False
 
-		for t in tokens:
-			group = self.bucket_groups.get(t, None)
-			if group is not None and group.whitelist.hit(url, domain_variants, options):
-				block = False
-				break
+		if self.plain_exceptionlist and self.plain_exceptionlist.search(url):
+			block = False
+		if block:
+			for t in tokens:
+				group = self.bucket_groups.get(t, None)
+				if group is not None and group.whitelist.hit(url, domain_variants, options):
+					block = False
+					break
 		if block:
 			block = not self.fallback_bucket_group.whitelist.hit(url, domain_variants, options)
 
 		return block
 
 	def __len__(self):
-		return sum(map(len, self.bucket_groups.values())) + len(self.fallback_bucket_group)
+		return sum(map(len, self.bucket_groups.values())) + len(self.fallback_bucket_group) + self.plain_len
 
 	def summary_str(self):
 		"""Get a summary string, helping diagnose bucketing problems."""
