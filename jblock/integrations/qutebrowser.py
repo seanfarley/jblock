@@ -43,6 +43,7 @@ jblock_buckets = None
 
 @cmdutils.register()
 def jblock_update():
+	"""Pull adblock lists from the internet onto disk."""
 	page = ""
 	for l in qbconfig.val.content.host_blocking.lists:
 		r = urllib.request.Request(l.toString(),
@@ -53,6 +54,7 @@ def jblock_update():
 
 @cmdutils.register()
 def jblock_reload():
+	"""Reload jblock rules from disk."""
 	global init_time
 	global jblock_buckets
 	init_time = time.perf_counter()
@@ -72,10 +74,17 @@ def jblock_reload():
 # Handle loading/saving token frequency
 @cmdutils.register()
 def jblock_save_frequency():
+	"""Save token frequency values to disk. Does not reload them into the current instance."""
 	global jblock_buckets
 	freq = jblock_buckets.get_token_frequency()
 	with open(JBLOCK_FREQ, "wb") as f:
 		pickle.dump(freq, f)
+
+@cmdutils.register()
+def jblock_reset_frequency():
+	"""Reset frequency counters, useful if browsing habits have dramatically changed."""
+	global jblock_buckets
+	jblock_buckets.reset_token_frequency()
 
 # First time init
 jblock_reload()
@@ -83,6 +92,7 @@ jblock_reload()
 # Handle loading/saving token frequency
 @cmdutils.register()
 def jblock_print_frequency(quiet=False):
+	"""Print a string representation of the current frequency data."""
 	global jblock_buckets
 	freq = jblock_buckets.get_token_frequency()
 	message.info(str(freq))

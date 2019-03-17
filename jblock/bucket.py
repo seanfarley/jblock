@@ -118,7 +118,7 @@ class JBlockBuckets():
 		if token_frequency:
 			self.token_frequency = token_frequency
 		else:
-			self.token_frequency = collections.Counter()  # type: typing.Counter[token.Token]
+			self.reset_token_frequency()
 		self._gen_buckets()
 
 	def _gen_buckets(self):
@@ -184,6 +184,10 @@ class JBlockBuckets():
 	def set_token_frequency(self, t):
 		"""Set a token frequency object, previously returned by get_token_frequency"""
 		self.token_frequency = t
+
+	def reset_token_frequency(self):
+		"""Reset token frequency to defaults."""
+		self.token_frequency = collections.Counter()  # type: typing.Counter[token.Token]
 
 	def regen_buckets(self):
 		"""Regenerate buckets to take advantage of (new) token profiling."""
