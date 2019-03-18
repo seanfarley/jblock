@@ -29,7 +29,7 @@ class JBlockBucket():
 
 	# To save memory, avoid creating these dicts per-object (and instead use the object as part of the key)
 	# TODO NEED TO CLEAR THESE DICTS
-	HITLIST_DICT_TYPE = typing.Dict[typing.Tuple['JBlockBucket', str], typing.Set[parser.JBlockRule]]
+	HITLIST_DICT_TYPE = typing.Dict[typing.Tuple['JBlockBucket', str], typing.List[parser.JBlockRule]]
 
 	__slots__ = ['supported_options', 'rules', 'length',
 				 'domain_hitlist', 'domain_exceptionlist']  # type: typing.List[str]
@@ -57,9 +57,9 @@ class JBlockBucket():
 				for domain, allow in r.options['domain'].items():
 					if allow:
 						all_exceptions = False
-						self.domain_hitlist[(self, domain)].add(r)
+						self.domain_hitlist[(self, domain)].append(r)
 					else:
-						self.domain_exceptionlist[(self, domain)].add(r)
+						self.domain_exceptionlist[(self, domain)].append(r)
 				if all_exceptions:
 					# If we are nothing but exceptions, we need to add ourselves to the generic rules as well (and
 					# possibly get negated in the exceptionlist)
@@ -80,9 +80,13 @@ class JBlockBucket():
 		# Hopefully, this won't be too expensive, as actually hitting domain rules should be fairly rare
 		for variant in domain_variants:
 			# If a rule already made it in, don't blacklist it
-			exceptions_in_flight.update(self.domain_exceptionlist.get((self, variant), set()) - rules_in_flight)
+			exceptions_in_flight.update(
+				itertools.filterfalse(functools.partial(operator.contains, rules_in_flight),
+					   self.domain_exceptionlist.get((self, variant), tuple())))
 			# if a rule already made it in, don't whitelist it
-			rules_in_flight.update(self.domain_hitlist.get((self, variant), set()) - exceptions_in_flight)
+			rules_in_flight.update(
+				itertools.filterfalse(functools.partial(operator.contains, exceptions_in_flight),
+					   self.domain_hitlist.get((self, variant), tuple())))
 
 		rules_to_check.difference_update(exceptions_in_flight)
 		rules_to_check.update(rules_in_flight)
@@ -132,8 +136,8 @@ class JBlockBuckets():
 		fallback_rules = []
 		# Variables that the buckets will share between them
 		self.buckets_vars = (
-			collections.defaultdict(set),
-			collections.defaultdict(set))
+			collections.defaultdict(list),
+			collections.defaultdict(list))
 
 		self.bucket_groups = {}  # type: typing.Dict[token.Token, JBlockBucketGroup]
 		self.plain_blacklist = []
