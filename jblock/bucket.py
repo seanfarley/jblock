@@ -37,7 +37,7 @@ class JBlockBucket():
 				 supported_options: typing.AbstractSet[str] = parser.JBlockRule.OPTIONS) -> None:
 		self.supported_options = supported_options
 		# Rules that always apply to this bucket
-		self.rules = set()  # type: typing.Set[parser.JBlockRule]
+		r_agg = []
 		self.length = 0
 
 		for r in rules:
@@ -59,9 +59,10 @@ class JBlockBucket():
 				if all_exceptions:
 					# If we are nothing but exceptions, we need to add ourselves to the generic rules as well (and
 					# possibly get negated in the exceptionlist)
-					self.rules.add(r)
+					r_agg.append(r)
 			else:
-				self.rules.add(r)
+				r_agg.append(r)
+		self.rules = tuple(r_agg) # type: typing.Tuple[parser.JBlockRule, ...]
 
 	def hit(self, url, domain_variants, options):
 		"Return true if any of the rules in this bucket are matched by the url."
