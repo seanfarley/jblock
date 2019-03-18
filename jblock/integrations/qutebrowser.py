@@ -61,7 +61,7 @@ def jblock_reload():
 	lines = []
 	if JBLOCK_RULES.exists():
 		with open(JBLOCK_RULES, "r") as f:
-			lines.extend(f.readlines())
+			lines = f.readlines()
 
 	freq = None
 	if JBLOCK_FREQ.exists():

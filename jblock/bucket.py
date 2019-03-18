@@ -120,15 +120,14 @@ class JBlockBuckets():
 				 rules: typing.List[str],
 				 supported_options=parser.JBlockRule.OPTIONS,
 				 token_frequency: 'typing.Counter[token.Token]' = None) -> None:
-		self.rules = rules
 		self.supported_options = supported_options
 		if token_frequency:
 			self.token_frequency = token_frequency
 		else:
 			self.reset_token_frequency()
-		self._gen_buckets()
+		self._gen_buckets(rules)
 
-	def _gen_buckets(self):
+	def _gen_buckets(self, rules):
 		bucket_agg = collections.defaultdict(list)
 		fallback_rules = []
 		# Variables that the buckets will share between them
@@ -137,17 +136,15 @@ class JBlockBuckets():
 			collections.defaultdict(set))
 
 		self.bucket_groups = {}  # type: typing.Dict[token.Token, JBlockBucketGroup]
-		self.unsupported_rules = []  # type: typing.List[str]
 		self.plain_blacklist = []
 		self.plain_exceptionlist = []
 		self.plain_len = 0
-		for r in self.rules:
+		for r in rules:
 			if isinstance(r, parser.JBlockRule):
 				rule = r
 			else:
 				rule = parser.JBlockRule(r)
 			if not rule.matching_supported(self.supported_options):
-				self.unsupported_rules.append(r)
 				continue
 
 			if not rule.options and isinstance(rule.matcher, matcher.PlainMatcher):
@@ -220,9 +217,9 @@ class JBlockBuckets():
 		"""Reset token frequency to defaults."""
 		self.token_frequency = collections.Counter()  # type: typing.Counter[token.Token]
 
-	def regen_buckets(self):
+	def regen_buckets(self, rules: typing.List[str]):
 		"""Regenerate buckets to take advantage of (new) token profiling."""
-		self._gen_buckets()
+		self._gen_buckets(rules)
 
 	def should_block(self, url: str, options=frozenset()) -> bool:
 		"""Decide if we should block a URL with OPTIONS.
