@@ -28,14 +28,18 @@ class JBlockBucket():
 	"""Class representing a single bucket."""
 
 	# To save memory, avoid creating these dicts per-object (and instead use the object as part of the key)
-	DOMAIN_HITLIST = collections.defaultdict(set) # type: typing.Dict[typing.Tuple[JBlockBucket, str], typing.Set[parser.JBlockRule]]
-	DOMAIN_EXCEPTIONLIST = collections.defaultdict(set)  # type: typing.Dict[typing.Tuple[JBlockBucket, str], typing.Set[parser.JBlockRule]]
+	# TODO NEED TO CLEAR THESE DICTS
+	HITLIST_DICT_TYPE = typing.Dict[typing.Tuple['JBlockBucket', str], typing.Set[parser.JBlockRule]]
 
-	__slots__ = ['supported_options', 'rules', 'length']  # type: typing.List[str]
+	__slots__ = ['supported_options', 'rules', 'length',
+				 'domain_hitlist', 'domain_exceptionlist']  # type: typing.List[str]
 
 	def __init__(self, rules: typing.MutableSequence[parser.JBlockRule],
+				 hitlist_dict: HITLIST_DICT_TYPE, exceptionlist_dict: HITLIST_DICT_TYPE,
 				 supported_options: typing.AbstractSet[str] = parser.JBlockRule.OPTIONS) -> None:
 		self.supported_options = supported_options
+		self.domain_hitlist = hitlist_dict
+		self.domain_exceptionlist = exceptionlist_dict
 		# Rules that always apply to this bucket
 		r_agg = []
 		self.length = 0
@@ -53,9 +57,9 @@ class JBlockBucket():
 				for domain, allow in r.options['domain'].items():
 					if allow:
 						all_exceptions = False
-						self.DOMAIN_HITLIST[(self, domain)].add(r)
+						self.domain_hitlist[(self, domain)].add(r)
 					else:
-						self.DOMAIN_EXCEPTIONLIST[(self, domain)].add(r)
+						self.domain_exceptionlist[(self, domain)].add(r)
 				if all_exceptions:
 					# If we are nothing but exceptions, we need to add ourselves to the generic rules as well (and
 					# possibly get negated in the exceptionlist)
@@ -76,9 +80,9 @@ class JBlockBucket():
 		# Hopefully, this won't be too expensive, as actually hitting domain rules should be fairly rare
 		for variant in domain_variants:
 			# If a rule already made it in, don't blacklist it
-			exceptions_in_flight.update(self.DOMAIN_EXCEPTIONLIST.get((self, variant), set()) - rules_in_flight)
+			exceptions_in_flight.update(self.domain_exceptionlist.get((self, variant), set()) - rules_in_flight)
 			# if a rule already made it in, don't whitelist it
-			rules_in_flight.update(self.DOMAIN_HITLIST.get((self, variant), set()) - exceptions_in_flight)
+			rules_in_flight.update(self.domain_hitlist.get((self, variant), set()) - exceptions_in_flight)
 
 		rules_to_check.difference_update(exceptions_in_flight)
 		rules_to_check.update(rules_in_flight)
@@ -127,6 +131,11 @@ class JBlockBuckets():
 	def _gen_buckets(self):
 		bucket_agg = collections.defaultdict(list)
 		fallback_rules = []
+		# Variables that the buckets will share between them
+		self.buckets_vars = (
+			collections.defaultdict(set),
+			collections.defaultdict(set))
+
 		self.bucket_groups = {}  # type: typing.Dict[token.Token, JBlockBucketGroup]
 		self.unsupported_rules = []  # type: typing.List[str]
 		self.plain_blacklist = []
@@ -185,7 +194,7 @@ class JBlockBuckets():
 			else:
 				blacklist.append(rule)
 		return JBlockBucketGroup(
-			bucket_token, JBlockBucket(blacklist), JBlockBucket(whitelist))
+			bucket_token, JBlockBucket(blacklist, *self.buckets_vars), JBlockBucket(whitelist, *self.buckets_vars))
 
 
 	def _pick_token(self, rule):
