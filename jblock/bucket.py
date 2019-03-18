@@ -27,14 +27,15 @@ from jblock.vendor import regexopt
 class JBlockBucket():
 	"""Class representing a single bucket."""
 
-	__slots__ = ['supported_options', 'rules',
-				 'domain_hitlist', 'domain_exceptionlist', 'length']  # type: typing.List[str]
+	# To save memory, avoid creating these dicts per-object (and instead use the object as part of the key)
+	DOMAIN_HITLIST = collections.defaultdict(set) # type: typing.Dict[typing.Tuple[JBlockBucket, str], typing.Set[parser.JBlockRule]]
+	DOMAIN_EXCEPTIONLIST = collections.defaultdict(set)  # type: typing.Dict[typing.Tuple[JBlockBucket, str], typing.Set[parser.JBlockRule]]
+
+	__slots__ = ['supported_options', 'rules', 'length']  # type: typing.List[str]
 
 	def __init__(self, rules: typing.MutableSequence[parser.JBlockRule],
 				 supported_options: typing.AbstractSet[str] = parser.JBlockRule.OPTIONS) -> None:
 		self.supported_options = supported_options
-		self.domain_hitlist = collections.defaultdict(set)  # type: typing.Dict[str, typing.Set[parser.JBlockRule]]
-		self.domain_exceptionlist = collections.defaultdict(set)  # type: typing.Dict[str, typing.Set[parser.JBlockRule]]
 		# Rules that always apply to this bucket
 		self.rules = set()  # type: typing.Set[parser.JBlockRule]
 		self.length = 0
@@ -52,9 +53,9 @@ class JBlockBucket():
 				for domain, allow in r.options['domain'].items():
 					if allow:
 						all_exceptions = False
-						self.domain_hitlist[domain].add(r)
+						self.DOMAIN_HITLIST[(self, domain)].add(r)
 					else:
-						self.domain_exceptionlist[domain].add(r)
+						self.DOMAIN_EXCEPTIONLIST[(self, domain)].add(r)
 				if all_exceptions:
 					# If we are nothing but exceptions, we need to add ourselves to the generic rules as well (and
 					# possibly get negated in the exceptionlist)
@@ -74,9 +75,9 @@ class JBlockBucket():
 		# Hopefully, this won't be too expensive, as actually hitting domain rules should be fairly rare
 		for variant in domain_variants:
 			# If a rule already made it in, don't blacklist it
-			exceptions_in_flight.update(self.domain_exceptionlist.get(variant, set()) - rules_in_flight)
+			exceptions_in_flight.update(self.DOMAIN_EXCEPTIONLIST.get((self, variant), set()) - rules_in_flight)
 			# if a rule already made it in, don't whitelist it
-			rules_in_flight.update(self.domain_hitlist.get(variant, set()) - exceptions_in_flight)
+			rules_in_flight.update(self.DOMAIN_HITLIST.get((self, variant), set()) - exceptions_in_flight)
 
 		rules_to_check.difference_update(exceptions_in_flight)
 		rules_to_check.update(rules_in_flight)
