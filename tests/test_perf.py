@@ -14,6 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import functools
+import tracemalloc
 
 import pytest
 
@@ -52,8 +53,19 @@ class TestEasyList():
 		return b
 
 	@pytest.fixture(scope="class")
-	def easylist_buckets_nofreq(self, easylist, ubo_urls):
+	def easylist_buckets_nofreq(self, easylist):
+		tracemalloc.start()
+		initial_snapshot = tracemalloc.take_snapshot()
+
 		b = bucket.JBlockBuckets(easylist)
+
+		new_snapshot = tracemalloc.take_snapshot()
+		tracemalloc.stop()
+		top_stats = new_snapshot.compare_to(initial_snapshot, 'lineno')
+		top_stats = top_stats[:100]
+		top_stats = "\n".join(map(str, top_stats))
+		# Remove if you don't like memory stats
+		print(top_stats)
 		return b
 
 	def test_bulk_bucket_creation(self, easylist, benchmark) -> bucket.JBlockBuckets:
