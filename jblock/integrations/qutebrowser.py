@@ -132,19 +132,23 @@ interceptor.register(jblock_intercept)
 
 @cmdutils.register()
 def jblock_print_buckets():
+	"""Print a summary of the hottest buckets."""
 	global jblock_buckets
 	message.info(jblock_buckets.summary_str())
 
 @cmdutils.register()
-def jblock_init_time():
+def jblock_print_init_time():
+	"""Print initialization time."""
 	message.info(str(init_time))
 
 @cmdutils.register()
 def jblock_avg_block_time():
+	"""Print the average amount of time spent blocking."""
 	message.info(str(blocking_time / blocking_num))
 
 @cmdutils.register()
 def jblock_total_block_time():
+	"""Print the total amount of time spent blocking."""
 	message.info(str(blocking_time))
 
 

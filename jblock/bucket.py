@@ -201,6 +201,8 @@ class JBlockBuckets():
 	def _pick_token(self, rule):
 		tokens = rule.to_tokens()
 		if self.token_frequency:
+			# FIXME picking the lowest frequency token ends up wasting a ton of memory, as we create a bucket for every
+			# rule!
 			return min(
 				tokens, default=None,
 				key=lambda k: self.token_frequency.get(k, 0))
