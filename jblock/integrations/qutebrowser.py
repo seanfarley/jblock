@@ -76,6 +76,8 @@ def jblock_reload():
 def jblock_save_frequency():
 	"""Save token frequency values to disk. Does not reload them into the current instance."""
 	global jblock_buckets
+	if jblock_buckets is None:
+		return
 	freq = jblock_buckets.get_token_frequency()
 	with open(JBLOCK_FREQ, "wb") as f:
 		pickle.dump(freq, f)
@@ -84,16 +86,17 @@ def jblock_save_frequency():
 def jblock_reset_frequency():
 	"""Reset frequency counters, useful if browsing habits have dramatically changed."""
 	global jblock_buckets
+	if jblock_buckets is None:
+		return
 	jblock_buckets.reset_token_frequency()
-
-# First time init
-jblock_reload()
 
 # Handle loading/saving token frequency
 @cmdutils.register()
 def jblock_print_frequency(quiet=False):
 	"""Print a string representation of the current frequency data."""
 	global jblock_buckets
+	if jblock_buckets is None:
+		return
 	freq = jblock_buckets.get_token_frequency()
 	message.info(str(freq))
 
@@ -101,6 +104,14 @@ def jblock_intercept(info: interceptor.Request):
 	global jblock_buckets
 	global blocking_time
 	global blocking_num
+	# we may be making the first request.
+
+	# We don't pre-initialize buckets as when starting qutebrowser over IPC, config is run first.
+	# We only want to add overhead to the main instance.
+	if jblock_buckets is None:
+		# First time init
+		jblock_reload()
+
 	start_time = time.perf_counter()
 	request_scheme = info.request_url.scheme()
 	if request_scheme in {"data", "blob"}:
@@ -134,6 +145,8 @@ interceptor.register(jblock_intercept)
 def jblock_print_buckets():
 	"""Print a summary of the hottest buckets."""
 	global jblock_buckets
+	if jblock_buckets is None:
+		return
 	message.info(jblock_buckets.summary_str())
 
 @cmdutils.register()
@@ -154,7 +167,9 @@ def jblock_print_total_block_time():
 
 # Code that will run periodically
 def _periodic_callback():
-	jblock_save_frequency()
+	global jblock_buckets
+	if jblock_buckets is not None:
+		jblock_save_frequency()
 	t = threading.Timer(JBLOCK_PERIODIC_TIME, _periodic_callback)
 	t.daemon = True
 	t.start()
