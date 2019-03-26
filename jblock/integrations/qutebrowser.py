@@ -114,7 +114,8 @@ def jblock_intercept(info: interceptor.Request):
 
 	start_time = time.perf_counter()
 	request_scheme = info.request_url.scheme()
-	if request_scheme in {"data", "blob"}:
+	if info.is_blocked or request_scheme in {"data", "blob"}:
+		# Don't do anything if we are already blocked or a internal url
 		return
 
 	request_host, context_host  = info.request_url.host(), info.first_party_url.host()
@@ -131,7 +132,6 @@ def jblock_intercept(info: interceptor.Request):
 		'subdocument': resource_type in
 		{interceptor.ResourceType.sub_frame,
 			interceptor.ResourceType.sub_resource},
-		'object': resource_type == interceptor.ResourceType.object,
 		'document': resource_type == interceptor.ResourceType.main_frame,
 		'third-party': not first_party,}
 	if jblock_buckets.should_block(url, options):
