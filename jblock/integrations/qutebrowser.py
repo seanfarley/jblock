@@ -17,7 +17,7 @@
 
 ## TODO FIXME make config-source not be super painful
 
-import sys, os, time, pickle, threading
+import sys, os, time, pickle, threading, heapq
 import urllib.request
 
 from jblock import bucket, tools
@@ -32,6 +32,7 @@ JBLOCK_RULES = config.datadir / "jblock-rules"
 JBLOCK_FREQ = config.datadir / "jblock-freq"
 # 1 hour in s
 JBLOCK_PERIODIC_TIME = 1 * 60 * 60
+JBLOCK_SLOWEST_URL_WINDOW = 10
 
 from qutebrowser.api import interceptor, cmdutils, message
 from qutebrowser.api import config as qbconfig
@@ -40,6 +41,7 @@ init_time = 0
 blocking_time = 0
 blocking_num = 0
 jblock_buckets = None
+slowest_urls = []
 
 @cmdutils.register()
 def jblock_update():
@@ -104,6 +106,7 @@ def jblock_intercept(info: interceptor.Request):
 	global jblock_buckets
 	global blocking_time
 	global blocking_num
+	global slowest_urls
 	# we may be making the first request.
 
 	# We don't pre-initialize buckets as when starting qutebrowser over IPC, config is run first.
@@ -136,8 +139,12 @@ def jblock_intercept(info: interceptor.Request):
 		'third-party': not first_party,}
 	if jblock_buckets.should_block(url, options):
 		info.block()
-	blocking_time += time.perf_counter() - start_time
+	time_change = time.perf_counter() - start_time
+	blocking_time += time_change
 	blocking_num += 1
+	heapq.heappush(slowest_urls, (time_change, url))
+	if len(slowest_urls) > JBLOCK_SLOWEST_URL_WINDOW:
+		heapq.heappop(slowest_urls)
 
 interceptor.register(jblock_intercept)
 
@@ -164,6 +171,10 @@ def jblock_print_total_block_time():
 	"""Print the total amount of time spent blocking."""
 	message.info(str(blocking_time))
 
+@cmdutils.register()
+def jblock_print_slowest_urls():
+	"""Print the urls that we spent the most time handling."""
+	message.info(str(sorted(slowest_urls, reverse=True)))
 
 # Code that will run periodically
 def _periodic_callback():
