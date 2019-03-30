@@ -20,7 +20,8 @@
 import sys, os, time, pickle, threading, heapq
 import urllib.request
 
-from jblock import bucket, tools
+from jblock import bucket
+from jblock.vendor.fpdomain import fpdomain
 
 # Since this is a qb integration, we get PyQt5 for free
 from PyQt5.QtCore import QTimer
@@ -30,6 +31,7 @@ c = c  # type: ConfigContainer # noqa: F821 pylint: disable=E0602,C0103
 
 JBLOCK_RULES = config.datadir / "jblock-rules"
 JBLOCK_FREQ = config.datadir / "jblock-freq"
+PSL_FILE = config.datadir / "psl"
 # 1 hour in s
 JBLOCK_PERIODIC_TIME = 1 * 60 * 60
 JBLOCK_SLOWEST_URL_WINDOW = 10
@@ -42,6 +44,7 @@ blocking_time = 0
 blocking_num = 0
 jblock_buckets = None
 slowest_urls = []
+psl = None
 
 @cmdutils.register()
 def jblock_update():
@@ -59,6 +62,7 @@ def jblock_reload():
 	"""Reload jblock rules from disk."""
 	global init_time
 	global jblock_buckets
+	global psl
 	init_time = time.perf_counter()
 	lines = []
 	if JBLOCK_RULES.exists():
@@ -72,6 +76,9 @@ def jblock_reload():
 
 	jblock_buckets = bucket.JBlockBuckets(lines, token_frequency=freq)
 	init_time = time.perf_counter() - init_time
+
+	# initialize PSL
+	psl = fpdomain.PSL(PSL_FILE)
 
 # Handle loading/saving token frequency
 @cmdutils.register()
@@ -107,6 +114,7 @@ def jblock_intercept(info: interceptor.Request):
 	global blocking_time
 	global blocking_num
 	global slowest_urls
+	global psl
 	# we may be making the first request.
 
 	# We don't pre-initialize buckets as when starting qutebrowser over IPC, config is run first.
@@ -122,7 +130,7 @@ def jblock_intercept(info: interceptor.Request):
 		return
 
 	request_host, context_host  = info.request_url.host(), info.first_party_url.host()
-	first_party = tools.get_first_party_domain(context_host) == tools.get_first_party_domain(request_host)
+	first_party = psl.fp_domain(context_host) == psl.fp_domain(request_host)
 
 	url = info.request_url.toString()
 	resource_type = info.resource_type
