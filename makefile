@@ -12,3 +12,7 @@ profile:
 
 mypy:
 	mypy jblock
+
+
+update-vendor:
+	git subtree pull --prefix jblock/vendor/fpdomain fpdomain vendor --squash
