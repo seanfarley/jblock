@@ -49,6 +49,7 @@ psl = None
 @cmdutils.register()
 def jblock_update():
 	"""Pull adblock lists from the internet onto disk."""
+	global psl
 	page = ""
 	for l in qbconfig.val.content.host_blocking.lists:
 		r = urllib.request.Request(l.toString(),
@@ -56,6 +57,8 @@ def jblock_update():
 		page += urllib.request.urlopen(r).read().decode("utf-8")
 	with open(JBLOCK_RULES, "w") as f:
 		f.write(page)
+
+	psl.update(PSL_FILE)
 
 @cmdutils.register()
 def jblock_reload():
