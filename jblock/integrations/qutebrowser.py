@@ -15,6 +15,9 @@
 
 """jblock integration into qutebrowser."""
 
+## --- SETTTINGS ---
+JBLOCK_GREASEMONKEY_CONTENT_BLOCK = False
+
 ## TODO FIXME make config-source not be super painful
 
 import sys, os, time, pickle, threading, heapq
@@ -85,7 +88,8 @@ def jblock_reload():
 	psl = fpdomain.PSL(PSL_FILE)
 
 	# Initialize element hiding script
-	jblock_buckets.write_css_greasemonkey(JBLOCK_GREASEMONKEY)
+	if JBLOCK_GREASEMONKEY_CONTENT_BLOCK:
+		jblock_buckets.write_css_greasemonkey(JBLOCK_GREASEMONKEY)
 
 # Handle loading/saving token frequency
 @cmdutils.register()

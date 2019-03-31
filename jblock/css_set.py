@@ -15,7 +15,7 @@
 
 """A set of css rules that can be built into a content blocking script"""
 
-import json, jinja2, pathlib, os, typing
+import json, jinja2, pathlib, os, typing, operator, functools
 
 class CssSet():
 	def __init__(self) -> None:
@@ -53,6 +53,18 @@ class CssSet():
 		temp = self.template_env.get_template("greasemonkey.js")
 		return temp.render(general_css=self._gen_css())
 
+	@staticmethod
+	def _chunks(l, n):
+		"""Yield successive n-sized chunks from l."""
+		for i in range(0, len(l), n):
+			yield l[i:i + n]
+
 	def _gen_css(self) -> str:
 		"""Generate (general) css from this ruleset"""
-		return ",".join(self.general_rules) + "{display:none !important;}"
+		# Chrome only supports up to 4000 rules per set.
+		chunked = CssSet._chunks(self.general_rules, 4000)
+		chunked = map(functools.partial(",".join), chunked)
+		def append_css(s):
+			return s + "{display:none !important;}"
+		chunked = map(append_css, chunked)
+		return "\n".join(chunked)
