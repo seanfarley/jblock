@@ -32,6 +32,7 @@ c = c  # type: ConfigContainer # noqa: F821 pylint: disable=E0602,C0103
 JBLOCK_RULES = config.datadir / "jblock-rules"
 JBLOCK_FREQ = config.datadir / "jblock-freq"
 PSL_FILE = config.datadir / "psl"
+JBLOCK_GREASEMONKEY = config.datadir / "greasemonkey" / "jblock-content-block.js"
 # 1 hour in s
 JBLOCK_PERIODIC_TIME = 1 * 60 * 60
 JBLOCK_SLOWEST_URL_WINDOW = 10
@@ -82,6 +83,9 @@ def jblock_reload():
 
 	# initialize PSL
 	psl = fpdomain.PSL(PSL_FILE)
+
+	# Initialize element hiding script
+	jblock_buckets.write_css_greasemonkey(JBLOCK_GREASEMONKEY)
 
 # Handle loading/saving token frequency
 @cmdutils.register()

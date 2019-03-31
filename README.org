@@ -120,6 +120,7 @@ Unsupported rules are silently ignored.
 * Installation
 ** Dependencies
 - ~python3~ or ~pypy3~ at language spec ~3.5~.
+- ~jinja2~
 
 ** Tests
 - ~pytest-benchmark~
