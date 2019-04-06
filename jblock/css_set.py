@@ -62,7 +62,7 @@ class CssSet():
 	def _gen_css(self) -> str:
 		"""Generate (general) css from this ruleset"""
 		# Chrome only supports up to 4000 rules per set.
-		chunked = CssSet._chunks(self.general_rules, 4000)
+		chunked = CssSet._chunks(self.general_rules, 3000)
 		chunked = map(functools.partial(",".join), chunked)
 		def append_css(s):
 			return s + "{display:none !important;}"
