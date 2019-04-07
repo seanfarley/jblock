@@ -22,7 +22,7 @@ import operator
 import pprint
 import pathlib
 
-from jblock import parser, token, matcher, tools, css_set
+from jblock import parser, token, matcher, tools
 
 class JBlockBucket():
 	"""Class representing a single bucket."""
@@ -124,7 +124,6 @@ class JBlockBuckets():
 				 rules: typing.List[str],
 				 supported_options=parser.JBlockRule.OPTIONS,
 				 token_frequency: 'typing.Counter[token.Token]' = None) -> None:
-		self.css_set = css_set.CssSet()
 		self.supported_options = supported_options
 		if token_frequency:
 			self.token_frequency = token_frequency
@@ -134,7 +133,6 @@ class JBlockBuckets():
 
 	def write_css_greasemonkey(self, path: pathlib.Path):
 		"""Generate content hiding css greasemonkey script"""
-		self.css_set.gen_greasemonkey_file(path)
 
 	def _gen_buckets(self, rules):
 		bucket_agg = collections.defaultdict(list)
@@ -151,7 +149,6 @@ class JBlockBuckets():
 			else:
 				rule = parser.JBlockRule(r)
 			if rule.is_html_rule:
-				self.css_set.add_rule(rule.rule_text)
 				continue
 			if not rule.matching_supported(self.supported_options):
 				continue
