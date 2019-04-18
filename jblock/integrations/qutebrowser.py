@@ -99,6 +99,14 @@ def jblock_save_frequency():
 		pickle.dump(freq, f)
 
 @cmdutils.register()
+def jblock_run_maint():
+	"""Run general non-update maintenance such as trimming the frequency dict."""
+	global jblock_buckets
+	if jblock_buckets is None:
+		return
+	jblock_buckets.run_frequency_cleanup()
+
+@cmdutils.register()
 def jblock_reset_frequency():
 	"""Reset frequency counters, useful if browsing habits have dramatically changed."""
 	global jblock_buckets
@@ -196,6 +204,7 @@ def _periodic_callback():
 	global jblock_buckets
 	if jblock_buckets is not None:
 		jblock_save_frequency()
+		jblock_run_maint()
 	t = threading.Timer(JBLOCK_PERIODIC_TIME, _periodic_callback)
 	t.daemon = True
 	t.start()

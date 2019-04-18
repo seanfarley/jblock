@@ -120,6 +120,8 @@ ie: an accept and a fail bucket, all with one tag.
 class JBlockBuckets():
 	"""Handle logic for maintaining and updating filter buckets."""
 
+	MAX_FREQUENCY_CAPACITY = 10000
+
 	def __init__(self,
 				 rules: typing.List[str],
 				 supported_options=parser.JBlockRule.OPTIONS,
@@ -196,6 +198,11 @@ class JBlockBuckets():
 			if tokens:
 				return tokens[0]
 			return None
+
+	def run_frequency_cleanup(self):
+		"""Runs cleanup on frequency to ensure it does not grow too large."""
+		self.token_frequency = collections.Counter(
+			dict(self.token_frequency.most_common()[:self.MAX_FREQUENCY_CAPACITY]))
 
 	def get_token_frequency(self):
 		"""Get a token frequency object, so we can speed up accesses next time we create an adblocker."""
