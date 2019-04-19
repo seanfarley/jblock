@@ -165,6 +165,10 @@ please read all the quirks below.
     ~:jblock-save-frequency~. On next start or ~:jblock-reload~, the frequency
     will be applied.
   - The frequency file will be saved, pickled, in ~<datadir>/jblock-freq~
+- The file ~<datadir>/jblock-whitelist~ will be read as a whitelist for
+  *contexts*. If ~eve.kerbin~ is placed into this file, all requests originating
+  from ~eve.kerbin~ and ~moho.eve.kerbin~ are blocked, but requests from
+  ~kerbin~ and other domains are not.
 
 * Inspiration/Sources
 - [[https://github.com/scrapinghub/adblockparser][adblockparser]]

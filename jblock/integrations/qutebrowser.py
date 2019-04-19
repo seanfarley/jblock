@@ -19,10 +19,10 @@
 
 ## TODO FIXME make config-source not be super painful
 
-import sys, os, time, pickle, threading, heapq
+import sys, os, time, pickle, threading, heapq, typing, operator, functools
 import urllib.request
 
-from jblock import bucket
+from jblock import bucket, tools
 from jblock.vendor.fpdomain import fpdomain
 
 # Since this is a qb integration, we get PyQt5 for free
@@ -30,6 +30,8 @@ from PyQt5.QtCore import QTimer
 
 config = config  # type: ConfigAPI # noqa: F821 pylint: disable=E0602,C0103
 c = c  # type: ConfigContainer # noqa: F821 pylint: disable=E0602,C0103
+
+JBLOCK_WHITELIST = config.datadir / "jblock-whitelist"
 
 JBLOCK_RULES = config.datadir / "jblock-rules"
 JBLOCK_FREQ = config.datadir / "jblock-freq"
@@ -46,8 +48,9 @@ init_time = 0
 blocking_time = 0
 blocking_num = 0
 jblock_buckets = None
-slowest_urls = []
+slowest_urls = []  # type: typing.List[str]
 psl = None
+whitelist_urls = tuple()  # type: typing.Container[str]
 
 @cmdutils.register()
 def jblock_update():
@@ -69,6 +72,7 @@ def jblock_reload():
 	global init_time
 	global jblock_buckets
 	global psl
+	global whitelist_urls
 	init_time = time.perf_counter()
 	lines = []
 	if JBLOCK_RULES.exists():
@@ -82,6 +86,12 @@ def jblock_reload():
 
 	jblock_buckets = bucket.JBlockBuckets(lines, token_frequency=freq)
 	init_time = time.perf_counter() - init_time
+
+	# Init whitelist (handled entirely in integration)
+	if JBLOCK_WHITELIST.exists():
+		with open(JBLOCK_WHITELIST, 'r') as f:
+			whitelist_urls = frozenset(
+				filter(None, map(operator.methodcaller('strip'), f)))
 
 	# initialize PSL
 	psl = fpdomain.PSL(PSL_FILE)
@@ -130,6 +140,7 @@ def jblock_intercept(info: interceptor.Request):
 	global blocking_num
 	global slowest_urls
 	global psl
+	global whitelist_urls
 	# we may be making the first request.
 
 	# We don't pre-initialize buckets as when starting qutebrowser over IPC, config is run first.
@@ -145,6 +156,13 @@ def jblock_intercept(info: interceptor.Request):
 		return
 
 	request_host, context_host  = info.request_url.host(), info.first_party_url.host()
+
+	if (whitelist_urls and any(map(
+			functools.partial(operator.contains, whitelist_urls),
+			tools.domain_variants(context_host)))):
+		# This context is whitelisted, don't block.
+		return
+
 	first_party = psl.fp_domain(context_host) == psl.fp_domain(request_host)
 
 	url = info.request_url.toString()
