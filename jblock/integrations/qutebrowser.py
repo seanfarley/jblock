@@ -233,7 +233,7 @@ def jblock_print_slowest_urls():
 
 @cmdutils.register()
 def jblock_print_block_history():
-	"""Print the urls that we spent the most time handling."""
+	"""Print all handled urls."""
 	message.info("\n".join(block_history))
 
 # Code that will run periodically
