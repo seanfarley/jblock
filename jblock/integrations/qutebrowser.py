@@ -53,21 +53,27 @@ psl = None
 whitelist_urls = tuple()  # type: typing.Container[str]
 
 @cmdutils.register()
-def jblock_update():
+def jblock_update(quiet=False):
 	"""Pull adblock lists from the internet onto disk."""
 	global psl
 	page = ""
-	for l in qbconfig.val.content.host_blocking.lists:
+	lists = qbconfig.val.content.host_blocking.lists
+	# TODO handle local block lists
+	for l in lists:
 		r = urllib.request.Request(l.toString(),
 									headers={'User-Agent': 'Mozilla/5.0'})
 		page += urllib.request.urlopen(r).read().decode("utf-8")
+	if not quiet:
+		message.info("Pulled {} lines from {} sources".format(len(page), len(lists)))
 	with open(JBLOCK_RULES, "w") as f:
 		f.write(page)
 
+	if not quiet:
+		message.info("Updating public suffix list.")
 	psl.update(PSL_FILE)
 
 @cmdutils.register()
-def jblock_reload():
+def jblock_reload(quiet=False):
 	"""Reload jblock rules from disk."""
 	global init_time
 	global jblock_buckets
@@ -86,6 +92,9 @@ def jblock_reload():
 
 	jblock_buckets = bucket.JBlockBuckets(lines, token_frequency=freq)
 	init_time = time.perf_counter() - init_time
+
+	if not quiet:
+		message.info("Loaded {} rules from lists.".format(len(jblock_buckets)))
 
 	# Init whitelist (handled entirely in integration)
 	if JBLOCK_WHITELIST.exists():
@@ -126,7 +135,7 @@ def jblock_reset_frequency():
 
 # Handle loading/saving token frequency
 @cmdutils.register()
-def jblock_print_frequency(quiet=False):
+def jblock_print_frequency():
 	"""Print a string representation of the current frequency data."""
 	global jblock_buckets
 	if jblock_buckets is None:
@@ -147,7 +156,7 @@ def jblock_intercept(info: interceptor.Request):
 	# We only want to add overhead to the main instance.
 	if jblock_buckets is None:
 		# First time init
-		jblock_reload()
+		jblock_reload(quiet=True)
 
 	start_time = time.perf_counter()
 	request_scheme = info.request_url.scheme()
