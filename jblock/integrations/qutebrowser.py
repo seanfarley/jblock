@@ -19,7 +19,7 @@
 
 ## TODO FIXME make config-source not be super painful
 
-import sys, os, time, pickle, threading, heapq, typing, operator, functools
+import sys, os, time, pickle, threading, heapq, typing, operator, functools, collections
 import urllib.request
 
 from jblock import bucket, tools
@@ -51,6 +51,7 @@ jblock_buckets = None
 slowest_urls = []  # type: typing.List[str]
 psl = None
 whitelist_urls = tuple()  # type: typing.Container[str]
+block_history = collections.deque(maxlen=50)  # type: typing.Deque[str]
 
 @cmdutils.register()
 def jblock_update(quiet=False):
@@ -150,6 +151,7 @@ def jblock_intercept(info: interceptor.Request):
 	global slowest_urls
 	global psl
 	global whitelist_urls
+	global block_history
 	# we may be making the first request.
 
 	# We don't pre-initialize buckets as when starting qutebrowser over IPC, config is run first.
@@ -189,6 +191,9 @@ def jblock_intercept(info: interceptor.Request):
 		'third-party': not first_party,}
 	if jblock_buckets.should_block(url, options):
 		info.block()
+		block_history.appendleft("%s %s" % ("BLOCKED: ", url))
+	else:
+		block_history.appendleft("%s %s" % ("ALLOWED: ", url))
 	time_change = time.perf_counter() - start_time
 	blocking_time += time_change
 	blocking_num += 1
@@ -225,6 +230,11 @@ def jblock_print_total_block_time():
 def jblock_print_slowest_urls():
 	"""Print the urls that we spent the most time handling."""
 	message.info(str(sorted(slowest_urls, reverse=True)))
+
+@cmdutils.register()
+def jblock_print_block_history():
+	"""Print the urls that we spent the most time handling."""
+	message.info("\n".join(block_history))
 
 # Code that will run periodically
 def _periodic_callback():
