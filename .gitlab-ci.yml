@@ -20,7 +20,7 @@ cache:
 
 before_script:
   - python -V               # Print out python version for debugging
-  - pip install pytest-benchmark mypy jinja2
+  - pip install pytest-benchmark mypy
 
 test:
   script:

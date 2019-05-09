@@ -22,10 +22,6 @@ Currently (with easylist), it seems like the average performance is somewhere
 in-between adblock plus and ublock origin (about an overhead of ~0.2 ms per
 request).
 
-Seeing as I only spent a couple hours optimizing this so far (aside from the
-initial design), I think we can beat ubo if we have better balancing of filter
-buckets (and even less reliance on python ~re~).
-
 However, if you care about performance at all, you shouldn't be using a abp
 style adblocker at all. even ~0.1ms overhead per request is extremely high,
 considering that a trivial inefficient python host blocker is an order of
@@ -53,9 +49,6 @@ pypy currently performs slightly better than cpython.
 
 Performance of loading lists is abysmal currently, with loading easylist taking
 several seconds.
-
-This is almost certainly extremely inefficient on memory, as I'm storing a ton
-of debug information for no reason.
 
 ** Tricks
 
