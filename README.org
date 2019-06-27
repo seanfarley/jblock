@@ -131,6 +131,7 @@ most options won't be supported until [[https://github.com/qutebrowser/qutebrows
 * Inspiration/Sources
 - [[https://github.com/scrapinghub/adblockparser][adblockparser]]
 - [[https://adblockplus.org/filter-cheatsheet#options][adblock filter cheatsheet]]
+- [[http://www.brave.com/improved-ad-blocker-performance/][Brave adblocking strategies]]
 - [[https://adblockplus.org/en/filters][ABP filter doc]]
 - [[https://adblockplus.org/blog/investigating-filter-matching-algorithms][(ABP) Investigating filter matching algorithms]]
 - [[https://adblockplus.org/forum/viewtopic.php?t=6118][ABP faster filter matching]]
