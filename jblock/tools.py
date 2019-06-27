@@ -19,6 +19,7 @@
 import re
 import collections
 import itertools
+import functools
 
 class JBlockParseError(ValueError):
     pass
@@ -36,18 +37,15 @@ class AnchorTypes():
 def domain_variants(domain):
 	"""
 	>>> list(_domain_variants("foo.bar.example.com"))
-	['foo.bar.example.com', 'bar.example.com', 'example.com']
+	['foo.bar.example.com', 'bar.example.com', 'example.com', 'com']
 	>>> list(_domain_variants("example.com"))
-	['example.com']
+	['example.com', 'com']
 	>>> list(_domain_variants("localhost"))
 	['localhost']
 	"""
-	parts = domain.split('.')
-	if len(parts) == 1:
-		yield parts[0]
-	else:
-		for i in range(len(parts), 1, -1):
-			yield ".".join(parts[-i:])
+	while domain:
+		yield domain
+		domain = domain.partition(".")[-1]
 
 def split_bw(rules):
 	return split_iter(rules, lambda r: not r.is_exception)

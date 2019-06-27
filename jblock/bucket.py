@@ -20,22 +20,28 @@ import itertools
 import collections
 import operator
 import pprint
+import pathlib
 
 from jblock import parser, token, matcher, tools
 
 class JBlockBucket():
 	"""Class representing a single bucket."""
 
-	__slots__ = ['supported_options', 'rules',
-				 'domain_hitlist', 'domain_exceptionlist', 'length']  # type: typing.List[str]
+	# To save memory, avoid creating these dicts per-object (and instead use the object as part of the key)
+	# TODO NEED TO CLEAR THESE DICTS
+	HITLIST_DICT_TYPE = typing.Dict[typing.Tuple['JBlockBucket', str], typing.List[parser.JBlockRule]]
+
+	__slots__ = ['supported_options', 'rules', 'length',
+				 'domain_hitlist', 'domain_exceptionlist']  # type: typing.List[str]
 
 	def __init__(self, rules: typing.MutableSequence[parser.JBlockRule],
+				 hitlist_dict: HITLIST_DICT_TYPE, exceptionlist_dict: HITLIST_DICT_TYPE,
 				 supported_options: typing.AbstractSet[str] = parser.JBlockRule.OPTIONS) -> None:
 		self.supported_options = supported_options
-		self.domain_hitlist = collections.defaultdict(set)  # type: typing.Dict[str, typing.Set[parser.JBlockRule]]
-		self.domain_exceptionlist = collections.defaultdict(set)  # type: typing.Dict[str, typing.Set[parser.JBlockRule]]
+		self.domain_hitlist = hitlist_dict
+		self.domain_exceptionlist = exceptionlist_dict
 		# Rules that always apply to this bucket
-		self.rules = set()  # type: typing.Set[parser.JBlockRule]
+		r_agg = []
 		self.length = 0
 
 		for r in rules:
@@ -51,17 +57,18 @@ class JBlockBucket():
 				for domain, allow in r.options['domain'].items():
 					if allow:
 						all_exceptions = False
-						self.domain_hitlist[domain].add(r)
+						self.domain_hitlist[(self, domain)].append(r)
 					else:
-						self.domain_exceptionlist[domain].add(r)
+						self.domain_exceptionlist[(self, domain)].append(r)
 				if all_exceptions:
 					# If we are nothing but exceptions, we need to add ourselves to the generic rules as well (and
 					# possibly get negated in the exceptionlist)
-					self.rules.add(r)
+					r_agg.append(r)
 			else:
-				self.rules.add(r)
+				r_agg.append(r)
+		self.rules = tuple(r_agg) # type: typing.Tuple[parser.JBlockRule, ...]
 
-	def hit(self, url, domain_variants, options=None):
+	def hit(self, url, domain_variants, options):
 		"Return true if any of the rules in this bucket are matched by the url."
 		rules_to_check = set(self.rules)
 		rules_in_flight = set()
@@ -73,14 +80,18 @@ class JBlockBucket():
 		# Hopefully, this won't be too expensive, as actually hitting domain rules should be fairly rare
 		for variant in domain_variants:
 			# If a rule already made it in, don't blacklist it
-			exceptions_in_flight.update(self.domain_exceptionlist.get(variant, set()) - rules_in_flight)
+			exceptions_in_flight.update(
+				itertools.filterfalse(functools.partial(operator.contains, rules_in_flight),
+					   self.domain_exceptionlist.get((self, variant), tuple())))
 			# if a rule already made it in, don't whitelist it
-			rules_in_flight.update(self.domain_hitlist.get(variant, set()) - exceptions_in_flight)
+			rules_in_flight.update(
+				itertools.filterfalse(functools.partial(operator.contains, exceptions_in_flight),
+					   self.domain_hitlist.get((self, variant), tuple())))
 
 		rules_to_check.difference_update(exceptions_in_flight)
 		rules_to_check.update(rules_in_flight)
 
-		return any(rule.match_url(url, options, ignore_domain=True) for rule in rules_to_check)
+		return any(rule.match_url_fast(url, options, True) for rule in rules_to_check)
 
 	def __len__(self):
 		return self.length
@@ -109,30 +120,39 @@ ie: an accept and a fail bucket, all with one tag.
 class JBlockBuckets():
 	"""Handle logic for maintaining and updating filter buckets."""
 
+	MAX_FREQUENCY_CAPACITY = 10000
+
 	def __init__(self,
 				 rules: typing.List[str],
 				 supported_options=parser.JBlockRule.OPTIONS,
-				 token_frequency: typing.Dict[token.Token, int] = {}) -> None:
-		self.rules = rules
+				 token_frequency: 'typing.Counter[token.Token]' = None) -> None:
 		self.supported_options = supported_options
 		if token_frequency:
 			self.token_frequency = token_frequency
 		else:
-			self.token_frequency = collections.defaultdict(int)  # type: typing.Dict[token.Token, int]
-		self._gen_buckets()
+			self.reset_token_frequency()
+		self._gen_buckets(rules)
 
-	def _gen_buckets(self):
+	def write_css_greasemonkey(self, path: pathlib.Path):
+		"""Generate content hiding css greasemonkey script"""
+
+	def _gen_buckets(self, rules):
 		bucket_agg = collections.defaultdict(list)
 		fallback_rules = []
+		# Variables that the buckets will share between them
+		self.buckets_vars = (
+			collections.defaultdict(list),
+			collections.defaultdict(list))
+
 		self.bucket_groups = {}  # type: typing.Dict[token.Token, JBlockBucketGroup]
-		self.unsupported_rules = []  # type: typing.List[str]
-		for r in self.rules:
+		for r in rules:
 			if isinstance(r, parser.JBlockRule):
 				rule = r
 			else:
 				rule = parser.JBlockRule(r)
+			if rule.is_html_rule:
+				continue
 			if not rule.matching_supported(self.supported_options):
-				self.unsupported_rules.append(r)
 				continue
 			t = self._pick_token(rule)
 			if t is None:
@@ -163,12 +183,14 @@ class JBlockBuckets():
 			else:
 				blacklist.append(rule)
 		return JBlockBucketGroup(
-			bucket_token, JBlockBucket(blacklist), JBlockBucket(whitelist))
+			bucket_token, JBlockBucket(blacklist, *self.buckets_vars), JBlockBucket(whitelist, *self.buckets_vars))
 
 
 	def _pick_token(self, rule):
 		tokens = rule.to_tokens()
 		if self.token_frequency:
+			# FIXME picking the lowest frequency token ends up wasting a ton of memory, as we create a bucket for every
+			# rule!
 			return min(
 				tokens, default=None,
 				key=lambda k: self.token_frequency.get(k, 0))
@@ -177,15 +199,28 @@ class JBlockBuckets():
 				return tokens[0]
 			return None
 
+	def run_frequency_cleanup(self):
+		"""Runs cleanup on frequency to ensure it does not grow too large."""
+		self.token_frequency = collections.Counter(
+			dict(self.token_frequency.most_common()[:self.MAX_FREQUENCY_CAPACITY]))
+
 	def get_token_frequency(self):
 		"""Get a token frequency object, so we can speed up accesses next time we create an adblocker."""
 		return self.token_frequency
 
-	def regen_buckets(self):
-		"""Regenerate buckets to take advantage of (new) token profiling."""
-		self._gen_buckets()
+	def set_token_frequency(self, t):
+		"""Set a token frequency object, previously returned by get_token_frequency"""
+		self.token_frequency = t
 
-	def should_block(self, url: str, options=None) -> bool:
+	def reset_token_frequency(self):
+		"""Reset token frequency to defaults."""
+		self.token_frequency = collections.Counter()  # type: typing.Counter[token.Token]
+
+	def regen_buckets(self, rules: typing.List[str]):
+		"""Regenerate buckets to take advantage of (new) token profiling."""
+		self._gen_buckets(rules)
+
+	def should_block(self, url: str, options=frozenset()) -> bool:
 		"""Decide if we should block a URL with OPTIONS.
 		Probabilities are: No Hit, Hit on Block, Hit on Block with Override
 

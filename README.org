@@ -13,8 +13,8 @@ very well documented either.
 
 [[https://www.youtube.com/watch?v=Bd29bqfuCSc&feature=youtu.be][Here's a demo, but expect it to be outdated very quickly]].
 
-Don't build anything on this yet, I expect to redo the API (which still mirrors
-the adblockparser api) to be more efficient.
+The API is subject to change, but shouldn't require large changes to your
+application if you depend on this as a library.
 
 * Performance
 
@@ -22,45 +22,38 @@ Currently (with easylist), it seems like the average performance is somewhere
 in-between adblock plus and ublock origin (about an overhead of ~0.2 ms per
 request).
 
-Seeing as I only spent a couple hours optimizing this so far (aside from the
-initial design), I think we can beat ubo if we have better balancing of filter
-buckets (and even less reliance on python ~re~).
-
 However, if you care about performance at all, you shouldn't be using a abp
 style adblocker at all. even ~0.1ms overhead per request is extremely high,
 considering that a trivial inefficient python host blocker is an order of
 magnitude faster for almost the same results.
 
 Here's an example of the overhead added for token generation (the absolute
-minimum for every request), an optimal match, a pathalogical case, and a profile
+minimum for every request), an optimal match, a pathalogical case, a profile
 against the requests contained in the abp/ubo comparison test (with a total of
-6655 requests).
+6655 requests), and initialization.
 
 #+begin_example
---------------------------------------------------------------------------------------------------------- benchmark: 5 tests --------------------------------------------------------------------------------------------------------
-Name (time in us)                             Min                     Max                    Mean                StdDev                  Median                    IQR            Outliers          OPS            Rounds  Iterations
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-test_token_str_bench                      12.2599 (1.0)           23.6998 (1.0)           12.7272 (1.0)          0.3908 (1.0)           12.6599 (1.0)           0.1399 (1.0)     2841;6527  78,571.6750 (1.0)       53938           1
-test_block[0]                             95.7900 (7.81)         131.6199 (5.55)          97.9050 (7.69)         1.4984 (3.83)          97.6389 (7.71)          0.9688 (6.92)      844;660  10,213.9855 (0.13)       8281           1
-test_pass[0]                             876.0681 (71.46)        947.8079 (39.99)        904.0612 (71.03)        8.7915 (22.50)        904.5430 (71.45)        11.5801 (82.76)      275;15   1,106.1198 (0.01)        934           1
-test_benchmark_no_options[True]      314,044.9070 (>1000.0)  318,352.0369 (>1000.0)  317,134.5354 (>1000.0)  1,795.5976 (>1000.0)  317,965.4370 (>1000.0)   1,922.7194 (>1000.0)       1;0       3.1532 (0.00)          5           1
-test_benchmark_no_options[False]     611,593.3661 (>1000.0)  630,946.3100 (>1000.0)  620,720.2506 (>1000.0)  8,177.4973 (>1000.0)  623,097.2190 (>1000.0)  13,579.6315 (>1000.0)       2;0       1.6110 (0.00)          5           1
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------- benchmark: 6 tests ---------------------------------------------------------------------------------------------------------
+Name (time in us)                             Min                     Max                    Mean                 StdDev                  Median                    IQR            Outliers          OPS            Rounds  Iterations
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+test_token_str_bench                      10.6700 (1.0)           34.9400 (1.0)           11.1656 (1.0)           0.4435 (1.0)           11.1200 (1.0)           0.1300 (1.0)      720;1106  89,561.1696 (1.0)       51520           1
+test_block[0]                             31.0200 (2.91)          62.5700 (1.79)          32.1354 (2.88)          1.2028 (2.71)          31.9700 (2.88)          0.2800 (2.15)      423;746  31,118.3445 (0.35)      12454           1
+test_pass[0]                             227.1400 (21.29)        286.2100 (8.19)         236.6732 (21.20)         4.4532 (10.04)        235.6950 (21.20)         2.4290 (18.68)     189;175   4,225.2357 (0.05)       2006           1
+test_benchmark_no_options[True]      184,861.7600 (>1000.0)  187,288.0560 (>1000.0)  185,462.5000 (>1000.0)     919.3131 (>1000.0)  185,115.8180 (>1000.0)     488.3500 (>1000.0)       1;1       5.3919 (0.00)          6           1
+test_benchmark_no_options[False]     384,976.0640 (>1000.0)  394,462.3870 (>1000.0)  390,141.6378 (>1000.0)   4,323.8709 (>1000.0)  391,685.0479 (>1000.0)   7,863.0238 (>1000.0)       1;0       2.5632 (0.00)          5           1
+test_bulk_bucket_creation            775,251.3300 (>1000.0)  802,635.5010 (>1000.0)  785,362.7060 (>1000.0)  11,730.4218 (>1000.0)  781,275.9990 (>1000.0)  18,864.4838 (>1000.0)       1;0       1.2733 (0.00)          5           1
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #+end_example
 
-Unfortunately, there's currently a regression from cpython when running with
-pypy, as it looks like pypy is slower than cpython when running ~re~.
+pypy currently performs slightly better than cpython.
 
 Performance of loading lists is abysmal currently, with loading easylist taking
 several seconds.
 
-This is almost certainly extremely inefficient on memory, as I'm storing a ton
-of debug information for no reason.
-
 ** Tricks
 
-We're using a couple tricks which aren't widely used. Hopefully other projects
-can become faster using some of these tricks.
+I'm using a couple tricks which aren't widely used. Hopefully other projects can
+become faster using some of these tricks.
 
 *** Picking Optimal Tokens
 
@@ -80,13 +73,27 @@ optimizes this by using a trie to match domains, but I'm using a dictionary of
 whitelist/blacklist domains. On most requests, this leads to a couple failed
 hashtable lookups (which are very cheap), but when we do hit, it can be painful.
 
+*** Multiple Matchers
+
+uBO has a host of blockers to vastly speed up host matching. In order to improve
+performance even more, they use the location of the found token to speed up
+matches (turning a string search into a string comparison). Unfortunately, for
+us, the overhead of function calls dwarfs the time spent matching, so we must
+avoid calling matchers entirely at all cost. To do this, we ensure every match
+is only checked for once (rather than being triggered every time a token appears
+in the url). This means the cost of checking for a match is higher, but we do
+less overall matches (and avoid python's huge function call overhead).
 
 * Correctness
 
 Honestly, I have no clue. There's not much in large datasets to compare against,
 but this (at least) passes the examples in the abp spec.
 
-I suspect there is some questionable logic in whitelisting domains.
+** qutebrowser
+- We miss the [[https://testpages.adblockplus.org/en/exceptions/document][exception document test]] as qtwebengine tells us inline images are
+  still images.
+- All ~blob~ and ~data~ urls are passed by default (blocking them would hurt
+  performance a lot).
 
 * Features
 
@@ -105,28 +112,56 @@ Unsupported rules are silently ignored.
 
 * Installation
 ** Dependencies
-- ~python3~ or ~pypy3~
+- ~python3~ or ~pypy3~ at language spec ~3.5~.
+
 ** Tests
 - ~pytest-benchmark~
+- ~mypy~
 
 If you pass pep8, you fail the style tests.
 
 There are make targets for common operations.
 
 ** qutebrowser
-This snippet in config.py seems to work for now on the git version of
-qutebrowser, if you clone this repo in the config directory. It PULLS EASYLIST
-FROM THIS REPO and not from the web. If you run ~:config-source~ it will reinit
-everything, causing double latency and memory usage (so don't do it). Please
-don't depend on anything here, it's all hacky and not done ~:]~.
 
-most options won't be supported until [[https://github.com/qutebrowser/qutebrowser/pull/4525][this pull request]] is finalized.
+DO NOT EXPECT THIS TO 'JUST WORK'.
+
+This snippet in config.py seems to work for now on the git version of
+qutebrowser, if you clone this repo in the config directory. If you use this,
+please read all the quirks below.
 
 #+begin_src python
   import sys, os
   sys.path.append(os.path.join(sys.path[0], 'jblock'))
   config.source("jblock/jblock/integrations/qutebrowser.py")
 #+end_src
+
+*** Quirks
+
+- If you run ~:config-source~ it will reinit everything, causing double latency
+  and memory usage (so don't do it).
+- We use a lot of memory at the moment. Expect your memory usage to increase
+  over 100 mb.
+- Frequencies of certain parts of URLs are recorded and saved to disk in order
+  to optimize the bucket layout to your browsing habits.
+- Performance on versions of python ~>=~ 3.7 are much better.
+
+* Usage (qutebrowser)
+
+- Set ~content.host_blocking.enabled~ to false, to avoid complications
+- Populate ~content.host_blocking.lists~ with abp style lists.
+- Run ~:jblock-update~. This will generate ~<datadir>/jblock-rules~
+- Run ~:jblock-reload~
+- In order to achieve optimal performance, you will need to build a frequency
+  database. This is done every hour automatically, but needs a restart.
+  - To do this manually, browse normally for a while, then run
+    ~:jblock-save-frequency~. On next start or ~:jblock-reload~, the frequency
+    will be applied.
+  - The frequency file will be saved, pickled, in ~<datadir>/jblock-freq~
+- The file ~<datadir>/jblock-whitelist~ will be read as a whitelist for
+  *contexts*. If ~eve.kerbin~ is placed into this file, all requests originating
+  from ~eve.kerbin~ and ~moho.eve.kerbin~ are whitelisted, but requests from
+  ~kerbin~ and other domains are not.
 
 * Inspiration/Sources
 - [[https://github.com/scrapinghub/adblockparser][adblockparser]]
@@ -136,6 +171,7 @@ most options won't be supported until [[https://github.com/qutebrowser/qutebrows
 - [[https://adblockplus.org/blog/investigating-filter-matching-algorithms][(ABP) Investigating filter matching algorithms]]
 - [[https://adblockplus.org/forum/viewtopic.php?t=6118][ABP faster filter matching]]
 - [[https://github.com/ZhukovAlexander/triegex][triegex]]
+- [[https://bitbucket.org/birkenfeld/pygments-main/src/default/pygments/regexopt.py][pygments regexopt]]
 - [[https://github.com/gorhill/uBlock/blob/master/src/js/static-net-filtering.js][uBlock filtering code]]
 - [[https://github.com/gorhill/uBlock/wiki/Overview-of-uBlock's-network-filtering-engine][uBlock design doc]]
 - [[https://github.com/adblockplus/adblockpluscore/blob/master/lib/matcher.js][ABP filtering code]]
