@@ -177,7 +177,12 @@ def jblock_intercept(info: interceptor.Request):
 	first_party = psl.fp_domain(context_host) == psl.fp_domain(request_host)
 
 	url = info.request_url.toString()
-	resource_type = info.resource_type
+	if hasattr(info, 'resource_type') and info.resource_type is not None:
+		resource_type = info.resource_type
+	else:
+		# On a backend that does not support resource_type. Technically this
+		# is un-supported, as adblock lists need this to work properly.
+		resource_type = interceptor.ResourceType.unknown
 	options = {
 		'domain': context_host,
 		'script': resource_type == interceptor.ResourceType.script,
