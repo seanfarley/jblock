@@ -42,17 +42,18 @@ JBLOCK_RULES = config.datadir / "jblock-rules"
 JBLOCK_FREQ = config.datadir / "jblock-freq"
 PSL_FILE = config.datadir / "psl"
 JBLOCK_GREASEMONKEY = config.datadir / "greasemonkey" / "jblock-content-block.js"
-# 1 hour in s
-JBLOCK_PERIODIC_TIME = 1 * 60 * 60
+
+JBLOCK_PERIODIC_TIME = 1 * 60 * 60  # 1 hour in s
 JBLOCK_SLOWEST_URL_WINDOW = 10
 
 init_time = 0
 blocking_time = 0
 blocking_num = 0
 jblock_buckets = None
-slowest_urls = []  # type: typing.List[str]
+slowest_urls = []		# type: typing.List[str]
 psl = None
-whitelist_urls = tuple()  # type: typing.Container[str]
+
+whitelist_urls = tuple()		      # type: typing.Container[str]
 block_history = collections.deque(maxlen=50)  # type: typing.Deque[str]
 
 @cmdutils.register()
