@@ -15,18 +15,23 @@
 
 """jblock integration into qutebrowser."""
 
-## --- SETTTINGS ---
+# TODO FIXME make config-source not be super painful
 
-## TODO FIXME make config-source not be super painful
-
-import sys, os, time, pickle, threading, heapq, typing, operator, functools, collections
+import collections
+import functools
+import heapq
+import time
+import operator
+import pickle
+import threading
+import typing
 import urllib.request
+
+from qutebrowser.api import interceptor, cmdutils, message
+from qutebrowser.api import config as qbconfig
 
 from jblock import bucket, tools
 from jblock.vendor.fpdomain import fpdomain
-
-# Since this is a qb integration, we get PyQt5 for free
-from PyQt5.QtCore import QTimer
 
 config = config  # type: ConfigAPI # noqa: F821 pylint: disable=E0602,C0103
 c = c  # type: ConfigContainer # noqa: F821 pylint: disable=E0602,C0103
@@ -40,9 +45,6 @@ JBLOCK_GREASEMONKEY = config.datadir / "greasemonkey" / "jblock-content-block.js
 # 1 hour in s
 JBLOCK_PERIODIC_TIME = 1 * 60 * 60
 JBLOCK_SLOWEST_URL_WINDOW = 10
-
-from qutebrowser.api import interceptor, cmdutils, message
-from qutebrowser.api import config as qbconfig
 
 init_time = 0
 blocking_time = 0
