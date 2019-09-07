@@ -16,7 +16,7 @@
 
 import pytest
 
-from jblock import token, parser
+from jblock import jtoken, parser
 
 TOKENS = {
 	"https://snowplow.trx.gitlab.net/com.snowplowanalytics.snowplow/tp2":
@@ -54,13 +54,13 @@ GENERIC_TOKENS = {
 
 @pytest.mark.parametrize(('url', 'tokens'), TOKENS.items())
 def test_token_basic(url, tokens):
-	assert token.TokenConverter.url_to_tokens(url) == tokens
+	assert jtoken.TokenConverter.url_to_tokens(url) == tokens
 
 
 @pytest.mark.parametrize(('pattern', 'tokens'), PATTERN_TOKENS.items())
 def test_pattern_token_basic(pattern, tokens):
 	re = parser.JBlockRule(pattern).regex
-	t = token.TokenConverter.regex_to_tokens(re)
+	t = jtoken.TokenConverter.regex_to_tokens(re)
 	assert t == tokens
 
 
@@ -72,13 +72,13 @@ def test_pattern_token_basic(pattern, tokens):
 ## Benchmarks
 
 def test_token_str_bench(benchmark):
-	benchmark(lambda: list(map(token.TokenConverter.url_to_tokens, TOKENS.keys())))
+	benchmark(lambda: list(map(jtoken.TokenConverter.url_to_tokens, TOKENS.keys())))
 
 
 @pytest.mark.skip()
 def test_token_int_bench(benchmark):
 	"""Looks like int hashing is slower than re split."""
-	benchmark(lambda: list(map(token.TokenConverter.url_to_tokens_int, TOKENS.keys())))
+	benchmark(lambda: list(map(jtoken.TokenConverter.url_to_tokens_int, TOKENS.keys())))
 
 
 # Bulk tests
@@ -92,7 +92,7 @@ def test_bulk_regexp_match():
 			if not p.matching_supported():
 				continue
 			r = p.regex
-			t = token.TokenConverter.regex_to_tokens(r)
+			t = jtoken.TokenConverter.regex_to_tokens(r)
 			if not t:
 				tokens.append(line)
 

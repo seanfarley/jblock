@@ -44,7 +44,7 @@ import collections
 import enum
 
 from jblock.tools import AnchorTypes
-from jblock import token, tools
+from jblock import jtoken, tools
 import jblock.matcher
 
 
@@ -173,7 +173,7 @@ class JBlockRule():
 	def is_regex(self):
 		return isinstance(self.matcher, jblock.matcher.RegexMatcher)
 
-	def to_tokens(self) -> typing.MutableSequence[token.Token]:
+	def to_tokens(self) -> typing.MutableSequence[jtoken.Token]:
 		"""Convert rule to tokens as well as possible.
 
 		https://github.com/gorhill/uBlock/blob/4f3aed6fe6347572c38ec9a293f933387b81e5de/src/js/static-net-filtering.js#L1949
@@ -182,12 +182,12 @@ class JBlockRule():
 		if not self.matching_supported(JBlockRule.OPTIONS):
 			return []
 		if self.is_regex():
-			return token.TokenConverter.regex_to_tokens(self.rule_text[1:-1])
+			return jtoken.TokenConverter.regex_to_tokens(self.rule_text[1:-1])
 		# TODO support '*' regex?
 
 		if AnchorTypes.HOSTNAME & self.anchors and '*' not in self.rule_text:
-			return token.TokenConverter.hostname_match_to_tokens(self.rule_text)
-		return token.TokenConverter.generic_filter_to_tokens(
+			return jtoken.TokenConverter.hostname_match_to_tokens(self.rule_text)
+		return jtoken.TokenConverter.generic_filter_to_tokens(
 			self.rule_text,
 			bool((AnchorTypes.START | AnchorTypes.HOSTNAME) & self.anchors),
 			bool(AnchorTypes.END & self.anchors))

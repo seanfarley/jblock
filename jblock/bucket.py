@@ -22,7 +22,7 @@ import operator
 import pprint
 import pathlib
 
-from jblock import parser, token, matcher, tools
+from jblock import parser, jtoken, matcher, tools
 
 class JBlockBucket():
 	"""Class representing a single bucket."""
@@ -106,7 +106,7 @@ ie: an accept and a fail bucket, all with one tag.
 	__slots__ = [
 		'bucket_token', 'blacklist', 'whitelist']  # type: typing.List[str]
 
-	def __init__(self, bucket_token: token.Token,
+	def __init__(self, bucket_token: jtoken.Token,
 				 blacklist: JBlockBucket,
 				 whitelist: JBlockBucket) -> None:
 		self.bucket_token = bucket_token
@@ -125,7 +125,7 @@ class JBlockBuckets():
 	def __init__(self,
 				 rules: typing.List[str],
 				 supported_options=parser.JBlockRule.OPTIONS,
-				 token_frequency: 'typing.Counter[token.Token]' = None) -> None:
+				 token_frequency: 'typing.Counter[jtoken.Token]' = None) -> None:
 		self.supported_options = supported_options
 		if token_frequency:
 			self.token_frequency = token_frequency
@@ -144,7 +144,7 @@ class JBlockBuckets():
 			collections.defaultdict(list),
 			collections.defaultdict(list))
 
-		self.bucket_groups = {}  # type: typing.Dict[token.Token, JBlockBucketGroup]
+		self.bucket_groups = {}  # type: typing.Dict[jtoken.Token, JBlockBucketGroup]
 		for r in rules:
 			if isinstance(r, parser.JBlockRule):
 				rule = r
@@ -172,7 +172,7 @@ class JBlockBuckets():
 		# 		print(v)
 
 	def _rule_list_to_bucket_group(
-			self, bucket_token: token.Token,
+			self, bucket_token: jtoken.Token,
 			rule_list: typing.List[parser.JBlockRule]) -> JBlockBucketGroup:
 		"""Generate a bucket group from a list of block rules and a token"""
 		blacklist = []
@@ -214,7 +214,7 @@ class JBlockBuckets():
 
 	def reset_token_frequency(self):
 		"""Reset token frequency to defaults."""
-		self.token_frequency = collections.Counter()  # type: typing.Counter[token.Token]
+		self.token_frequency = collections.Counter()  # type: typing.Counter[jtoken.Token]
 
 	def regen_buckets(self, rules: typing.List[str]):
 		"""Regenerate buckets to take advantage of (new) token profiling."""
@@ -227,7 +227,7 @@ class JBlockBuckets():
 		So:
 		1. Check all blacklist filters
 		2. Check all whitelist filters (if that hit)"""
-		tokens, block = token.TokenConverter.url_to_tokens(url), False
+		tokens, block = jtoken.TokenConverter.url_to_tokens(url), False
 		if options is not None and 'domain' in options:
 			domain_variants = list(tools.domain_variants(options['domain']))
 		else:
